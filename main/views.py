@@ -275,9 +275,7 @@ def clients(request):
         contact_number = request.POST['contact_number']
         check_number = Client.objects.filter(contact_number=contact_number).exists()
         if form.is_valid():
-            client = form.save(commit=False)
-            client.user = request.user
-            client.save()
+            form.save()
             sweetify.toast(request, 'Client added')
             return HttpResponseRedirect(reverse('clients'))
         elif check_number:
@@ -481,12 +479,22 @@ def bill_reject(request, pk):
 @login_required(login_url='login')
 def usage_analytics_view(request):
     if request.user.is_superuser:
-        bills = WaterBill.objects.exclude(billing_date__isnull=True)
+        bills = WaterBill.objects.exclude(billing_date__isnull=True).order_by('billing_date')
     else:
-        bills = WaterBill.objects.filter(name__user=request.user).exclude(billing_date__isnull=True)
+        bills = WaterBill.objects.filter(name__user=request.user).exclude(billing_date__isnull=True).order_by('billing_date')
+
+    if request.user.is_superuser:
+        bills = WaterBill.objects.exclude(billing_date__isnull=True).order_by('billing_date')
+    else:
+        bills = WaterBill.objects.filter(name__user=request.user).exclude(billing_date__isnull=True).order_by('billing_date')
+
+    print(f"Bills for user {request.user}: {bills}")
 
     labels = [bill.billing_date.strftime('%B %Y') for bill in bills]
     data = [bill.meter_consumption for bill in bills]
+
+    print(f"Usage Analytics Labels: {labels}")
+    print(f"Usage Analytics Data: {data}")
 
     average_usage = sum(data) / len(data) if data else 0
     highest_consumption = max(data) if data else 0
@@ -542,19 +550,29 @@ def payment_cancel(request):
     sweetify.toast(request, 'Payment cancelled.', icon='error')
     return HttpResponseRedirect(reverse('ongoingbills'))
 
+
 @login_required(login_url='login')
 @verified_or_superuser
 def user_dashboard(request):
     try:
         client = Client.objects.get(user=request.user)
         bills = WaterBill.objects.filter(name=client).order_by('-billing_date')
+        metrics = Metric.objects.get(user=request.user)
+        print(f"Client found: {client.first_name} {client.last_name}, Meter: {client.meter_number}")
+        print(f"Metrics found: Consumption Amount: {metrics.consump_amount}, Penalty Amount: {metrics.penalty_amount}")
     except Client.DoesNotExist:
         client = None
         bills = []
+        metrics = None
+        print("Client does not exist for this user.")
+    except Metric.DoesNotExist:
+        metrics = None
+        print("Metrics do not exist for this user.")
 
     context = {
         'title': 'My Meter',
         'client': client,
-        'bills': bills
+        'bills': bills,
+        'metrics': metrics,
     }
     return render(request, 'main/user_dashboard.html', context)

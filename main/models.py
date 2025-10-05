@@ -7,9 +7,9 @@ import string, secrets
 class Client(models.Model):
     user = models.ForeignKey(Account, on_delete=models.CASCADE, null=True)
     meter_number = models.BigIntegerField(null=True)
-    first_name = models.CharField(max_length=30, editable=False) 
-    last_name = models.CharField(max_length=30, editable=False) 
-    middle_name = models.CharField(max_length=30, null=True, blank=True, editable=False) 
+    first_name = models.CharField(max_length=30) 
+    last_name = models.CharField(max_length=30) 
+    middle_name = models.CharField(max_length=30, null=True, blank=True) 
     contact_number = models.CharField(null=True, unique=True, max_length=13)
     address = models.CharField(max_length=250)
     status = models.TextField(choices=(('Connected', 'Connected'), ('Disconnected', 'Disconnected'), ('Pending', 'Pending')))

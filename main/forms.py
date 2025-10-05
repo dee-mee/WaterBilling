@@ -9,7 +9,7 @@ class BillForm(forms.ModelForm):
 
     class Meta:
         model = WaterBill
-        fields = ['name','meter_consumption', 'payment_status', 'duedate', 'penaltydate']
+        fields = ['name','meter_consumption', 'payment_status', 'billing_date', 'duedate', 'penaltydate']
         exclude = ['penalty', 'bill',]
         widgets = {
             'name': forms.Select(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'Name' }),
@@ -17,6 +17,7 @@ class BillForm(forms.ModelForm):
             'payment_status': forms.Select(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'Pay Status' }),
             'duedate': forms.TextInput(attrs={'type': 'date', 'class': 'form-control', 'placeholder':'Due Date' }),
             'penaltydate': forms.TextInput(attrs={'type': 'date', 'class': 'form-control', 'placeholder':'Penalty Date' }),
+            'billing_date': forms.TextInput(attrs={'type': 'date', 'class': 'form-control', 'placeholder':'Billing Date' }),
         }
 
 
@@ -25,7 +26,7 @@ class ClientForm(forms.ModelForm):
 
     class Meta:
         model = Client
-        fields = '__all__'
+        fields = ['user', 'meter_number', 'contact_number', 'address', 'status']
         widgets = {
             'meter_number': forms.TextInput(attrs={'type': 'number', 'class': 'form-control', 'placeholder':'0000000' }),
             'first_name': forms.TextInput(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'First Name' }),

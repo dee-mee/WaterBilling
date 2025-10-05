@@ -1,6 +1,6 @@
 {% extends 'main/layout.html' %}
 
-{% block content %}
+{% block body %}
 <div class="container-fluid px-4">
     <h1 class="mt-4">{{ title }}</h1>
     <ol class="breadcrumb mb-4">
@@ -20,6 +20,19 @@
             <p><strong>Connection Status:</strong> <span class="badge bg-{% if client.status == 'Connected' %}success{% else %}danger{% endif %}">{{ client.status }}</span></p>
         </div>
     </div>
+
+    {% if metrics %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-chart-line me-1"></i>
+            Meter Metrics
+        </div>
+        <div class="card-body">
+            <p><strong>Consumption Amount per Unit:</strong> {{ metrics.consump_amount }}</p>
+            <p><strong>Penalty Amount:</strong> {{ metrics.penalty_amount }}</p>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="card mb-4">
         <div class="card-header">
