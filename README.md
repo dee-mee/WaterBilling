@@ -1,7 +1,3 @@
-# Water Billing Management System with SMS API from twillio using [Python - Django Framework]
-This was Developed By [Fermilan, Christian Jhegg](https://www.facebook.com/Donjheggo/) a Student @ [Surigao del Norte State University](https://snsu.edu.ph/)
-
-
 You can ADD a STAR ⭐️  if you like this project 👆
 
 ### Pre-Requisites:
@@ -116,10 +112,6 @@ $  python3 manage.py createsuperuser
 Then Add Email and Password
 
 
-## For Sponsor or Projects Enquiry
-1. Email - christianjheggfer@gmail.com
-2. LinkedIn - [donjheggo](www.linkedin.com/in/donjheggo)
-2. Facebook - [donjheggo](https://www.facebook.com/Donjheggo)
 
 
 ## How the system works
