@@ -1,0 +1,41 @@
+{% extends 'main/layout.html' %}
+{% block body %}
+<div class="container-fluid">
+    <h1 class="h3 mb-2 text-primary font-weight-bolder">Approve Bills</h1><br>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary text-center">Bills Pending Approval</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered tally-table" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Client</th>
+                            <th>Cubic Meter Consumption</th>
+                            <th>Consumption Cost</th>
+                            <th>Due Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                       {% for bill in bills %}
+                        <tr>
+                            <td> {{bill.name}} </td>
+                            <td> {{bill.meter_consumption}} cu.m</td> 
+                            <td> ₱{{bill.compute_bill}}</td> 
+                            <td> {{bill.duedate}} </td> 
+                            <td class="text-center">  
+                                <a href="{% url 'bill_approve' bill.id %}" class="btn btn-success">Approve</a>
+                                <a href="{% url 'bill_reject' bill.id %}" class="btn btn-danger">Reject</a>
+                            </td>
+                        </tr>   
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

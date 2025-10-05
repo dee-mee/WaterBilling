@@ -1,0 +1,46 @@
+{% extends 'main/layout.html' %}
+{% block body %}
+<div class="container-fluid">
+    <h1 class="h3 mb-2 text-primary font-weight-bolder">Add User</h1><br>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary text-center">Add New User</h6>
+        </div>
+        <div class="card-body">
+            <form action="" method="POST" class="user">
+                {% csrf_token %}
+                <div class="form-group mt-3">
+                    <label>First Name: </label> <br>
+                    {{ form.first_name }}
+                </div>
+                <div class="form-group mt-3">
+                    <label>Last Name: </label> <br>
+                    {{ form.last_name }}
+                </div>
+                <div class="form-group mt-3">
+                    <label>Email: </label> <br>
+                    {{ form.email }}
+                </div>
+                <div class="form-group mt-3">
+                    <label>Password: </label> <br>
+                    {{ form.password }}
+                </div>
+                <div class="form-group mt-3">
+                    <label>Confirm Password: </label> <br>
+                    {{ form.password2 }}
+                </div>
+                <div class="form-group mt-3">
+                    <label>Is Staff: </label> <br>
+                    {{ form.is_staff }}
+                </div>
+                <div class="form-group mt-3">
+                    <label>Is Superuser: </label> <br>
+                    {{ form.is_superuser }}
+                </div>
+                <button class="btn btn-primary" type="submit">Add User</button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

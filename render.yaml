@@ -1,0 +1,23 @@
+databases:
+  - name: water_billing
+    databaseName: water_billing
+    user: water_billing
+    plan: free
+
+services:
+  - type: web
+    name: water-billing
+    runtime: python
+    buildCommand: "./build.sh"
+    startCommand: "gunicorn core.wsgi"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: water_billing
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: WEB_CONCURRENCY
+        value: 4
+      - key: PYTHON_VERSION
+        value: 3.10.6

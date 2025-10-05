@@ -1,0 +1,8 @@
+<form action="{% if client %}{% url 'edit_customer' client.id %}{% else %}{% url 'add_customer' %}{% endif %}" method="POST" class="user" id="customer-form">
+    {% csrf_token %}
+    {{ form.as_p }}
+   <div class="d-flex justify-content-center">
+   <input type="submit" value="Save Customer" class="btn btn-primary btn-user  w-50">
+   <button type="button" class="ml-3 btn btn-secondary btn-user  w-50" data-dismiss="modal">Cancel</button>
+   </div>
+</form>

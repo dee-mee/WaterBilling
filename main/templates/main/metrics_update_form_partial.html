@@ -1,0 +1,8 @@
+<form action="{% url 'metrics_update_form' metrics.id %}" method="POST" class="user" id="metrics-update-form">
+    {% csrf_token %}
+    {{ form.as_p }}
+   <div class="d-flex justify-content-center">
+   <input type="submit" value="Save" class="btn btn-primary btn-user  w-25">
+   <button type="button" class="ml-3 btn btn-secondary btn-user  w-25" data-dismiss="modal">Cancel</button>
+   </div>
+</form>

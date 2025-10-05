@@ -1,0 +1,239 @@
+{% extends 'main/layout.html' %}
+
+{% load static %}
+
+
+{% block body %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Metrics</h1>
+        <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" id="add-customer-btn"><i class="fas fa-plus fa-sm text-white-50"></i> Add New Meter</a>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">Total Meters</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_meters }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Total Consumption (All Time)</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_consumption }} m³</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">Connected</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ connected_clients }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">Disconnected</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ disconnected_clients }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-times-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-4 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">Pending</div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ pending_clients }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-exclamation-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Meters</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Meter No.</th>
+                            <th>Customer</th>
+                            <th>Account No.</th>
+                            <th>Total Consumption (m³)</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for client in clients %}
+                        <tr>
+                            <td>{{ client.meter_number }}</td>
+                            <td>{{ client.first_name }} {{ client.last_name }}</td>
+                            <td>{% if client.user %}{{ client.user.id }}{% else %}N/A{% endif %}</td>
+                            <td>{{ client.total_consumption }}</td>
+                            <td>{{ client.status }}</td>
+                            <td>
+                                <button type="button" class="btn btn-primary edit-customer-btn" data-client-id="{{ client.id }}">Edit</button>
+                                <button type="button" class="btn btn-danger delete-customer-btn" data-client-id="{{ client.id }}">Delete</button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Customer Form Modal -->
+<div class="modal fade" id="customerFormModal" tabindex="-1" role="dialog" aria-labelledby="customerFormModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="customerFormModalLabel">Add Customer</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <!-- Form will be loaded here via AJAX -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Add new customer
+    $('#add-customer-btn').on('click', function() {
+        var modal = $('#customerFormModal');
+        $.ajax({
+            url: '{% url "add_customer" %}',
+            type: 'GET',
+            success: function(data) {
+                modal.find('.modal-body').html(data);
+                modal.find('.modal-title').text('Add Customer');
+                modal.modal('show');
+            },
+            error: function() {
+                alert('Error loading form.');
+            }
+        });
+    });
+
+    // Edit customer
+    $('#dataTable').on('click', '.edit-customer-btn', function() {
+        var clientId = $(this).data('client-id');
+        var modal = $('#customerFormModal');
+        $.ajax({
+            url: '{% url "edit_customer" 0 %}'.replace('0', clientId),
+            type: 'GET',
+            success: function(data) {
+                modal.find('.modal-body').html(data);
+                modal.find('.modal-title').text('Edit Customer');
+                modal.modal('show');
+            },
+            error: function() {
+                alert('Error loading form.');
+            }
+        });
+    });
+
+    // Delete customer
+    $('#dataTable').on('click', '.delete-customer-btn', function() {
+        var clientId = $(this).data('client-id');
+        if (confirm('Are you sure you want to delete this customer?')) {
+            $.ajax({
+                url: '{% url "clientdelete" 0 %}'.replace('0', clientId),
+                type: 'POST',
+                data: {
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert('Error deleting customer.');
+                    }
+                },
+                error: function() {
+                    alert('Error deleting customer.');
+                }
+            });
+        }
+    });
+
+    // Handle form submission
+    $('#customerFormModal').on('submit', '#customer-form', function(event) {
+        event.preventDefault();
+        var form = $(this);
+        var modal = $('#customerFormModal');
+        $.ajax({
+            url: form.attr('action'),
+            type: form.attr('method'),
+            data: form.serialize(),
+            success: function(response) {
+                if (response.success) {
+                    modal.modal('hide');
+                    location.reload();
+                } else {
+                    modal.find('.modal-body').html(response.form_html);
+                }
+            },
+            error: function() {
+                alert('Error submitting form.');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
