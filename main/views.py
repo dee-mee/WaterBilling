@@ -557,7 +557,7 @@ def payment_cancel(request):
 def user_dashboard(request):
     try:
         client = Client.objects.get(user=request.user)
-        bills = WaterBill.objects.filter(name=client).order_by('-billing_date')
+        bills = WaterBill.objects.filter(name=client, approval_status='Approved').order_by('-billing_date')
         metrics = Metric.objects.get(user=request.user)
         print(f"Client found: {client.first_name} {client.last_name}, Meter: {client.meter_number}")
         print(f"Metrics found: Consumption Amount: {metrics.consump_amount}, Penalty Amount: {metrics.penalty_amount}")

@@ -45,7 +45,7 @@
                             {% if request.user.is_superuser %}
                             <td class="text-center">  
                                 <a href="{% url 'billupdate' bill.id %}" class="btn btn-primary"><i class="fa-regular fa-pen-to-square"></i></a>
-                                <a href="" class="btn btn-danger"><i class="fa-solid fa-trash-can"></i></a>
+                                <a href="{% url 'billdelete' bill.id %}" class="btn btn-danger"><i class="fa-solid fa-trash-can"></i></a>
                                 <a href="{% url 'download_invoice' bill.id %}" class="btn btn-secondary"><i class="fa-solid fa-download"></i></a>
                             </td>
                             {% endif %}
