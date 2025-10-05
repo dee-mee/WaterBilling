@@ -541,3 +541,20 @@ def payment_success(request, pk):
 def payment_cancel(request):
     sweetify.toast(request, 'Payment cancelled.', icon='error')
     return HttpResponseRedirect(reverse('ongoingbills'))
+
+@login_required(login_url='login')
+@verified_or_superuser
+def user_dashboard(request):
+    try:
+        client = Client.objects.get(user=request.user)
+        bills = WaterBill.objects.filter(name=client).order_by('-billing_date')
+    except Client.DoesNotExist:
+        client = None
+        bills = []
+
+    context = {
+        'title': 'My Meter',
+        'client': client,
+        'bills': bills
+    }
+    return render(request, 'main/user_dashboard.html', context)

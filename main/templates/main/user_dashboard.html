@@ -1,0 +1,64 @@
+{% extends 'main/layout.html' %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <h1 class="mt-4">{{ title }}</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item active">My Meter Details</li>
+    </ol>
+
+    {% if client %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-user me-1"></i>
+            Client Information
+        </div>
+        <div class="card-body">
+            <p><strong>Name:</strong> {{ client.first_name }} {{ client.last_name }}</p>
+            <p><strong>Meter Number:</strong> {{ client.meter_number }}</p>
+            <p><strong>Address:</strong> {{ client.address }}</p>
+            <p><strong>Connection Status:</strong> <span class="badge bg-{% if client.status == 'Connected' %}success{% else %}danger{% endif %}">{{ client.status }}</span></p>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            <i class="fas fa-tint me-1"></i>
+            Water Consumption History
+        </div>
+        <div class="card-body">
+            <table id="datatablesSimple">
+                <thead>
+                    <tr>
+                        <th>Billing Date</th>
+                        <th>Previous Reading</th>
+                        <th>Present Reading</th>
+                        <th>Consumption (Units)</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for bill in bills %}
+                    <tr>
+                        <td>{{ bill.billing_date|date:"Y-m-d" }}</td>
+                        <td>{{ bill.previous_reading }}</td>
+                        <td>{{ bill.present_reading }}</td>
+                        <td>{{ bill.meter_consumption }}</td>
+                        <td>
+                            <span class="badge bg-{% if bill.payment_status == 'Paid' %}success{% else %}warning{% endif %}">
+                                {{ bill.payment_status }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="alert alert-warning" role="alert">
+        No meter has been assigned to your account yet. Please contact the administrator.
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -35,7 +35,8 @@ urlpatterns = [
     path('usage-analytics/', views.usage_analytics_view, name='usage_analytics'),
     path('create-checkout-session/<int:pk>', views.create_checkout_session, name='create_checkout_session'),
     path('payment-success/<int:pk>', views.payment_success, name='payment_success'),
-    path('payment-cancel/', views.payment_cancel, name='payment_cancel')
+    path('payment-cancel/', views.payment_cancel, name='payment_cancel'),
+    path('my-meter/', views.user_dashboard, name='user_dashboard')
 
     
 ]
