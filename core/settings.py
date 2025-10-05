@@ -15,7 +15,7 @@ CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'https://*.onrender.com']
 
 CORS_ALLOWED_ORIGINS = ['http://localhost:8000', 'https://*.onrender.com']
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'water-billing.onrender.com']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'waterbilling-r92q.onrender.com', '.onrender.com']
 
 
 AUTH_USER_MODEL = 'account.Account'
