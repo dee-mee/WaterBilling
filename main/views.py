@@ -129,6 +129,7 @@ def ongoing_bills(request):
                 sweetify.toast(request, f'Contact Number is invalid format: {bill.name.contact_number} (Error: {e})', icon='error')
             return HttpResponseRedirect(request.path_info)
         else:
+            print(billform.errors) # Add this line to print form errors
             sweetify.toast(request, 'Invalid Details', icon='error')
     return render(request, 'main/billsongoing.html', context)
 
