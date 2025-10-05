@@ -37,8 +37,8 @@ INSTALLED_APPS = [
     'bootstrap_modal_forms',
 ]
 
-STRIPE_PUBLISHABLE_KEY = 'pk_test_51H...'
-STRIPE_SECRET_KEY = 'sk_test_51H...'
+STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
+STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

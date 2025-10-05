@@ -21,7 +21,7 @@ import stripe
 from account.forms import RegistrationForm
 from django.template.loader import render_to_string
 
-stripe.api_key = settings.STRIPE_SECRET_KEY
+stripe.api_key = settings.STRIPE_SECRET_KEY if settings.STRIPE_SECRET_KEY else None
 
 def landingpage(request):
     return render(request, 'landingpage/landingpage.html')  
@@ -117,11 +117,14 @@ def ongoing_bills(request):
                 penaltydate = bill.penaltydate
                 SID = os.environ.get('TWILIO_ACCOUNT_SID')
                 Auth_Token = os.environ.get('TWILIO_AUTH_TOKEN')
-                sender = '+17262005435'
-                message = f'\n Your Total Bill is: {totalbill} pesos \n\n Your due date is: {duedate} \n\n Your penalty date is: {penaltydate}'
-                cl = TwilClient(SID, Auth_Token)
-                cl.messages.create(body=message, from_=sender, to=receiver)
-                sweetify.toast(request, 'Notification Sent')
+                if SID and Auth_Token:
+                    sender = '+17262005435'
+                    message = f'\n Your Total Bill is: {totalbill} pesos \n\n Your due date is: {duedate} \n\n Your penalty date is: {penaltydate}'
+                    cl = TwilClient(SID, Auth_Token)
+                    cl.messages.create(body=message, from_=sender, to=receiver)
+                    sweetify.toast(request, 'Notification Sent')
+                else:
+                    sweetify.toast(request, 'Twilio credentials not configured.', icon='warning')
             except Exception as e: # Catch the exception to get more details
                 sweetify.toast(request, f'Contact Number is invalid format: {bill.name.contact_number} (Error: {e})', icon='error')
             return HttpResponseRedirect(request.path_info)
@@ -432,12 +435,16 @@ def send_reminders_view(request):
             try:
                 SID = os.environ.get('TWILIO_ACCOUNT_SID')
                 Auth_Token = os.environ.get('TWILIO_AUTH_TOKEN')
-                sender = '+17262005435'
-                receiver = bill.client.contact_number
-                message = f'\n Your Total Bill is: {bill.total_bill} pesos \n\n Your due date is: {bill.due_date} \n\n Your penalty date is: {bill.penalty_date}'
-                cl = TwilClient(SID, Auth_Token)
-                cl.messages.create(body=message, from_=sender, to=receiver)
-                sweetify.toast(request, f'Reminder sent to {bill.client.first_name} {bill.client.last_name}')
+                if SID and Auth_Token:
+                    sender = '+17262005435'
+                    receiver = bill.client.contact_number
+                    message = f'\n Your Total Bill is: {bill.total_bill} pesos \n\n Your due date is: {bill.due_date} \n\n Your penalty date is: {bill.penalty_date}'
+                    cl = TwilClient(SID, Auth_Token)
+                    cl.messages.create(body=message, from_=sender, to=receiver)
+                    sweetify.toast(request, f'Reminder sent to {bill.client.first_name} {bill.client.last_name}')
+                else:
+                    sweetify.toast(request, 'Twilio credentials not configured.', icon='warning')
+                    break # Stop sending reminders if keys are not set
             except:
                 sweetify.toast(request, f'Could not send reminder to {bill.client.first_name} {bill.client.last_name}', icon='error')
         return HttpResponseRedirect(reverse('ongoingbills'))
@@ -498,6 +505,9 @@ def usage_analytics_view(request):
 
 @login_required(login_url='login')
 def create_checkout_session(request, pk):
+    if not settings.STRIPE_SECRET_KEY:
+        sweetify.toast(request, 'Stripe is not configured.', icon='error')
+        return HttpResponseRedirect(reverse('ongoingbills'))
     bill = WaterBill.objects.get(id=pk)
     session = stripe.checkout.Session.create(
         payment_method_types=['card'],
