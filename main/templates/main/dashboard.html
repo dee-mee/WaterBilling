@@ -133,7 +133,7 @@
                                 <td> {{bill.penaltydate}} </td> 
                                 <td> {% if bill.penalty %} ₱{{bill.penalty}} {% else %} No Penalty {% endif %}</td> 
                                 <td> ₱{{bill.payable}} </td> 
-                                <td> {{bill.status}} </td>
+                                <td> {{bill.payment_status}} </td>
                             </tr>   
                             {% endfor %}
                         </tbody>

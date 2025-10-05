@@ -87,6 +87,7 @@ def dashboard(request):
         'total_users': Account.objects.filter(is_superuser=False).count(),
         'total_bills': WaterBill.objects.all().count(),
         'pending_bills': WaterBill.objects.filter(payment_status='Pending').count(),
+        'ongoingbills': WaterBill.objects.filter(payment_status='Pending'),
         'connected_clients': Client.objects.filter(status='Connected').count(),
         'disconnected_clients': Client.objects.filter(status='Disconnected').count(),
     }
@@ -144,7 +145,6 @@ def history_bills(request):
     context = {
         'title': 'Bills History',
         'billshistory': billshistory,
-        'form': BillForm()
     }
     return render(request, 'main/billshistory.html', context)
 
