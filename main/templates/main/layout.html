@@ -93,9 +93,13 @@
                 <div class="bg-light py-2 collapse-inner rounded" style="color:white;">
                     <a class="collapse-item" href="{% url 'ongoingbills' %}">Ongoing Bills</a>
                     <a class="collapse-item" href="{% url 'billshistory' %}">Bill History</a>
-
                 </div>
             </div>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'usage_analytics' %}">
+                <i class="fas fa-fw fa-chart-area"></i>
+                <span>Usage Analytics</span></a>
         </li>
         <hr class="sidebar-divider">
         <div class="sidebar-heading">
@@ -152,24 +156,6 @@
                 <span>My Meter</span></a>
         </li>
         {% endif %}
-        <li class="nav-item">
-            <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                <i class="fa-solid fa-file-invoice"></i>
-                <span>Bills</span>
-            </a>
-            <div id="collapseThree" class="collapse" aria-labelledby="headingOne" data-parent="#accordionSidebar">
-                <div class="bg-light py-2 collapse-inner rounded" style="color:white;">
-                    <a class="collapse-item" href="{% url 'ongoingbills' %}">Ongoing Bills</a>
-                    <a class="collapse-item" href="{% url 'billshistory' %}">Bill History</a>
-
-                </div>
-            </div>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="{% url 'usage_analytics' %}">
-                <i class="fas fa-fw fa-chart-area"></i>
-                <span>Usage Analytics</span></a>
-        </li>
 
     </ul>
     <!-- End of Sidebar -->
