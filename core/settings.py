@@ -121,6 +121,8 @@ STATICFILES_DIRS = [
     "main/static",
 ]
 
+CREATE_SUPERUSER = os.environ.get("CREATE_SUPERUSER") == "1"
+
 
 OTP = False
 OTP_EMAIL = "youremail@gmail.com"
