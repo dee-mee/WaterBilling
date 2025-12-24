@@ -2,6 +2,7 @@ from django.shortcuts import render, HttpResponseRedirect
 from django.contrib.auth import authenticate, login, logout
 from django.urls import reverse
 from .forms import *
+from .models import Account
 from main.models import *
 from django.conf import settings
 import sweetify
@@ -26,6 +27,11 @@ def login_view(request):
         password = request.POST['password']
         user = authenticate(request, email=email, password=password)
         if user is not None:
+            # Check if user is approved by admin (superusers are always approved)
+            if not user.is_superuser and not user.admin_approved:
+                sweetify.error(request, 'Your account is pending admin approval. Please wait for an administrator to approve your account.')
+                return render(request, 'account/login.html', {'error': 'Account pending approval'})
+            
             if settings.OTP:
                 login(request, user)
                 if user.verified:
@@ -108,8 +114,11 @@ def register_view(request):
             sweetify.error(request, 'Password do not match!')
             return render(request, 'account/register.html', {'error': 'Password do not match!', 'Registration_Form':Registration_Form})
         elif Registration_Form.is_valid():
-            Registration_Form.save()
-            sweetify.success(request, 'Registration Successful')
+            user = Registration_Form.save()
+            # New users are not approved by default
+            user.admin_approved = False
+            user.save()
+            sweetify.success(request, 'Registration Successful. Your account is pending admin approval.')
             return HttpResponseRedirect(reverse('login'))
         elif Account.objects.filter(email=email).exists():
             sweetify.error(request, 'Email already exist!')

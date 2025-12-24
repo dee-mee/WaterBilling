@@ -69,9 +69,20 @@
                 <span>Dashboard</span></a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" href="{% url 'clients' %}">
-                <i class="fa-solid fa-people-roof"></i>
-                <span>Clients</span></a>
+            <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseUsers" aria-expanded="false" aria-controls="collapseUsers">
+                <i class="fa-solid fa-users"></i>
+                <span>Users</span>
+            </a>
+            <div id="collapseUsers" class="collapse" aria-labelledby="headingUsers" data-parent="#accordionSidebar">
+                <div class="bg-light py-2 collapse-inner rounded" style="color:white;">
+                    <a class="collapse-item" href="{% url 'users_all' %}">All</a>
+                    <a class="collapse-item" href="{% url 'users_pending' %}">Pending Approval</a>
+                    <a class="collapse-item" href="{% url 'users_rejected' %}">Rejected</a>
+                    <a class="collapse-item" href="{% url 'users_approved' %}">Approved</a>
+                    <a class="collapse-item" href="{% url 'users_active' %}">Active</a>
+                    <a class="collapse-item" href="{% url 'users_inactive' %}">Inactive</a>
+                </div>
+            </div>
         </li>
         <li class="nav-item">
             <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
@@ -86,15 +97,33 @@
                 </div>
             </div>
         </li>
+        <hr class="sidebar-divider">
+        <div class="sidebar-heading">
+            Meter Management
+        </div>
         <li class="nav-item">
-            <a class="nav-link" href="{% url 'users' %}">
-                <i class="fa-solid fa-users"></i>
-                <span>Users</span></a>
-        </li>
-        <li class="nav-item">
-            <a class="nav-link" href="{% url 'metrics' %}">
+            <a class="nav-link collapsed" href="#" data-toggle="collapse" data-target="#collapseMeter" aria-expanded="false" aria-controls="collapseMeter">
                 <i class="fa-solid fa-gauge-high"></i>
-                <span>Metrics</span></a>
+                <span>Meters</span>
+            </a>
+            <div id="collapseMeter" class="collapse" aria-labelledby="headingMeter" data-parent="#accordionSidebar">
+                <div class="bg-light py-2 collapse-inner rounded" style="color:white;">
+                    <a class="collapse-item" href="{% url 'metrics_active' %}">Active</a>
+                    <a class="collapse-item" href="{% url 'metrics_inactive' %}">Inactive</a>
+                    <a class="collapse-item" href="{% url 'metrics_add_remove' %}">Add/Remove</a>
+                    <a class="collapse-item" href="{% url 'assign_meter' %}">Assign Meter</a>
+                    <a class="collapse-item" href="{% url 'metrics' %}">All Meters</a>
+                </div>
+            </div>
+        </li>
+        <hr class="sidebar-divider">
+        <div class="sidebar-heading">
+            Map
+        </div>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'meters_map' %}">
+                <i class="fa-solid fa-map"></i>
+                <span>Meters Map</span></a>
         </li>
         <li class="nav-item">
             <a class="nav-link" href="{% url 'bulk_upload' %}">
@@ -263,34 +292,53 @@
         AOS.init();
     </script>
     <script>
-        $(".tally-table").DataTable({
-            responsive: true,
-            pading: true,
-            pageLength: 10,
-            lengthChange: true,
-            autoWidth: true,
-            searching: true,
-            bInfo: true,
-            bSort: true,
-            dom: 'Bfrtipl',
-            searchPanes: {
-            viewTotal: true
-            },
-            buttons: [
-                {
-                    extend: 'print',
-                    text: 'Print',
-                    className: 'btn btn-success',
-                    titleAttr: 'Print',
-                },
-                {
-                    extend: 'pdf',
-                    text: 'PDF',
-                    className: 'ml-2 btn btn-secondary',
-                    titleAttr: 'PDF',
-                },
-            ]
+        $(".tally-table").each(function() {
+            var table = $(this);
+            var headerCount = table.find('thead th').length;
             
+            // Only initialize if table has headers
+            if (headerCount > 0) {
+                try {
+                    // Destroy existing DataTable if it exists
+                    if ($.fn.DataTable.isDataTable(table)) {
+                        table.DataTable().destroy();
+                    }
+                    
+                    table.DataTable({
+                        responsive: true,
+                        pading: true,
+                        pageLength: 10,
+                        lengthChange: true,
+                        autoWidth: false,
+                        searching: true,
+                        bInfo: true,
+                        bSort: true,
+                        dom: 'Bfrtipl',
+                        columnDefs: [
+                            { targets: '_all', orderable: true }
+                        ],
+                        searchPanes: {
+                            viewTotal: true
+                        },
+                        buttons: [
+                            {
+                                extend: 'print',
+                                text: 'Print',
+                                className: 'btn btn-success',
+                                titleAttr: 'Print',
+                            },
+                            {
+                                extend: 'pdf',
+                                text: 'PDF',
+                                className: 'ml-2 btn btn-secondary',
+                                titleAttr: 'PDF',
+                            },
+                        ]
+                    });
+                } catch(e) {
+                    console.warn('DataTables initialization error:', e);
+                }
+            }
         });
         $(".receipt_table").DataTable({
             bPaginate: false,

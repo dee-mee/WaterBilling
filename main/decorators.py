@@ -10,10 +10,19 @@ def verified_or_superuser(function):
   @wraps(function)
   def wrap(request, *args, **kwargs):
         profile = request.user
-        if profile.verified or profile.is_superuser:
+        # Superusers are always allowed
+        if profile.is_superuser:
              return function(request, *args, **kwargs)
-        else:
+        # Check if user is verified (OTP) and approved by admin
+        if profile.verified and profile.admin_approved:
+             return function(request, *args, **kwargs)
+        # If not verified, redirect to verification
+        elif not profile.verified:
             return HttpResponseRedirect(reverse('verify'))
+        # If not approved by admin, show message and redirect to login
+        else:
+            sweetify.error(request, 'Your account is pending admin approval. Please wait for an administrator to approve your account.')
+            return HttpResponseRedirect(reverse('login'))
 
   return wrap
 

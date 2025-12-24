@@ -12,6 +12,8 @@ class Client(models.Model):
     middle_name = models.CharField(max_length=30, null=True, blank=True) 
     contact_number = models.CharField(null=True, unique=True, max_length=13)
     address = models.CharField(max_length=250)
+    latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, help_text="Latitude coordinate for map location")
+    longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, help_text="Longitude coordinate for map location")
     status = models.TextField(choices=(('Connected', 'Connected'), ('Disconnected', 'Disconnected'), ('Pending', 'Pending')))
 
     def save(self, *args, **kwargs):

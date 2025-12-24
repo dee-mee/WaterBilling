@@ -26,13 +26,15 @@ class ClientForm(forms.ModelForm):
 
     class Meta:
         model = Client
-        fields = ['user', 'meter_number', 'contact_number', 'address', 'status']
+        fields = ['user', 'meter_number', 'contact_number', 'address', 'latitude', 'longitude', 'status']
         widgets = {
             'meter_number': forms.TextInput(attrs={'type': 'number', 'class': 'form-control', 'placeholder':'0000000' }),
             'first_name': forms.TextInput(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'First Name' }),
             'middle_name': forms.TextInput(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'Middle Name' }),
             'last_name': forms.TextInput(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'Last Name' }),
-            'address': forms.TextInput(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'House Number, Street, Purok, Barangay' }),
+            'address': forms.TextInput(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'House Number, Street, Area' }),
+            'latitude': forms.NumberInput(attrs={'type': 'number', 'step': '0.000001', 'class': 'form-control', 'placeholder':'-1.2921', 'id': 'id_latitude'}),
+            'longitude': forms.NumberInput(attrs={'type': 'number', 'step': '0.000001', 'class': 'form-control', 'placeholder':'36.8219', 'id': 'id_longitude'}),
             'status': forms.Select(attrs={'class': 'form-control', 'placeholder':'Select' }),
         }
 
@@ -42,11 +44,13 @@ class CustomerForm(forms.ModelForm):
 
     class Meta:
         model = Client
-        fields = ['user', 'meter_number', 'contact_number', 'address', 'status']
+        fields = ['user', 'meter_number', 'contact_number', 'address', 'latitude', 'longitude', 'status']
         widgets = {
             'user': forms.Select(attrs={'class': 'form-control'}),
             'meter_number': forms.TextInput(attrs={'type': 'number', 'class': 'form-control', 'placeholder':'0000000' }),
-            'address': forms.TextInput(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'House Number, Street, Purok, Barangay' }),
+            'address': forms.TextInput(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'House Number, Street, Area' }),
+            'latitude': forms.NumberInput(attrs={'type': 'number', 'step': '0.000001', 'class': 'form-control', 'placeholder':'-1.2921', 'id': 'id_latitude'}),
+            'longitude': forms.NumberInput(attrs={'type': 'number', 'step': '0.000001', 'class': 'form-control', 'placeholder':'36.8219', 'id': 'id_longitude'}),
             'status': forms.Select(attrs={'class': 'form-control', 'placeholder':'Select' }),
         }
 

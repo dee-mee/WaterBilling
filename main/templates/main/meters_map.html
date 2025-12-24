@@ -1,0 +1,190 @@
+{% extends 'main/layout.html' %}
+{% load static %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Meters Map</h1>
+        <div class="btn-group" role="group">
+            <a href="{% url 'meters_map' %}?filter=all" 
+               class="btn btn-sm {% if filter_type == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">
+                All Meters ({{ total_meters }})
+            </a>
+            <a href="{% url 'meters_map' %}?filter=active" 
+               class="btn btn-sm {% if filter_type == 'active' %}btn-primary{% else %}btn-secondary{% endif %}">
+                Active ({{ active_count }})
+            </a>
+            <a href="{% url 'meters_map' %}?filter=inactive" 
+               class="btn btn-sm {% if filter_type == 'inactive' %}btn-primary{% else %}btn-secondary{% endif %}">
+                Inactive ({{ inactive_count }})
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Meter Locations</h6>
+        </div>
+        <div class="card-body">
+            <div id="map" style="height: 600px; width: 100%;"></div>
+        </div>
+    </div>
+
+    <!-- Meter Details Modal -->
+    <div class="modal fade" id="meterDetailsModal" tabindex="-1" role="dialog" aria-labelledby="meterDetailsModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="meterDetailsModalLabel">Meter Details</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="meterDetailsContent">
+                    <!-- Details will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""/>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+        crossorigin=""></script>
+
+<script>
+    // Initialize map - Default to Nairobi, Kenya
+    var map = L.map('map').setView([-1.2921, 36.8219], 6); // Default to Kenya (Nairobi)
+    
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19
+    }).addTo(map);
+    
+    // Meter data from Django
+    var metersData = {{ meters_data|safe }};
+    
+    // Color based on status
+    function getMarkerColor(status) {
+        if (status === 'Connected') {
+            return 'green';
+        } else if (status === 'Disconnected') {
+            return 'red';
+        } else {
+            return 'orange';
+        }
+    }
+    
+    // Icon based on status
+    function createCustomIcon(status) {
+        var color = getMarkerColor(status);
+        return L.divIcon({
+            className: 'custom-marker',
+            html: `<div style="background-color: ${color}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+    }
+    
+    // Add markers to map
+    var markers = [];
+    metersData.forEach(function(meter) {
+        var marker = L.marker([meter.latitude, meter.longitude], {
+            icon: createCustomIcon(meter.status)
+        }).addTo(map);
+        
+        // Popup content
+        var popupContent = `
+            <div style="min-width: 200px;">
+                <h6><strong>Meter #${meter.meter_number}</strong></h6>
+                <p><strong>Customer:</strong> ${meter.name}</p>
+                <p><strong>Status:</strong> <span class="badge badge-${meter.status === 'Connected' ? 'success' : meter.status === 'Disconnected' ? 'danger' : 'warning'}">${meter.status}</span></p>
+                <p><strong>Address:</strong> ${meter.address}</p>
+                <p><strong>Contact:</strong> ${meter.contact_number}</p>
+                <p><strong>Total Consumption:</strong> ${meter.total_consumption} m³</p>
+                <button class="btn btn-sm btn-primary mt-2" onclick="showMeterDetails(${meter.id})">View Details</button>
+            </div>
+        `;
+        
+        marker.bindPopup(popupContent);
+        
+        // Store meter data in marker
+        marker.meterData = meter;
+        markers.push(marker);
+        
+        // Click event to show details modal
+        marker.on('click', function() {
+            showMeterDetails(meter.id);
+        });
+    });
+    
+    // Fit map to show all markers
+    if (markers.length > 0) {
+        var group = new L.featureGroup(markers);
+        map.fitBounds(group.getBounds().pad(0.1));
+    }
+    
+    // Function to show meter details in modal
+    function showMeterDetails(meterId) {
+        var meter = metersData.find(m => m.id === meterId);
+        if (!meter) return;
+        
+        var detailsHtml = `
+            <table class="table table-bordered">
+                <tr>
+                    <th>Meter Number</th>
+                    <td>${meter.meter_number}</td>
+                </tr>
+                <tr>
+                    <th>Customer Name</th>
+                    <td>${meter.name}</td>
+                </tr>
+                <tr>
+                    <th>Status</th>
+                    <td><span class="badge badge-${meter.status === 'Connected' ? 'success' : meter.status === 'Disconnected' ? 'danger' : 'warning'}">${meter.status}</span></td>
+                </tr>
+                <tr>
+                    <th>Address</th>
+                    <td>${meter.address}</td>
+                </tr>
+                <tr>
+                    <th>Contact Number</th>
+                    <td>${meter.contact_number}</td>
+                </tr>
+                <tr>
+                    <th>Total Consumption</th>
+                    <td>${meter.total_consumption} m³</td>
+                </tr>
+                <tr>
+                    <th>Location</th>
+                    <td>Lat: ${meter.latitude}, Lng: ${meter.longitude}</td>
+                </tr>
+            </table>
+        `;
+        
+        document.getElementById('meterDetailsContent').innerHTML = detailsHtml;
+        $('#meterDetailsModal').modal('show');
+    }
+    
+    // Make function available globally
+    window.showMeterDetails = showMeterDetails;
+</script>
+
+<style>
+    .custom-marker {
+        background: transparent;
+        border: none;
+    }
+</style>
+{% endblock %}
+

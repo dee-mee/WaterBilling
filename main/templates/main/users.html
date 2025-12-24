@@ -3,10 +3,36 @@
 {% block body %}
 <div class="container-fluid">
     <div class="d-flex"> 
-        <h1 class="h3 mb-2 text-primary font-weight-bolder">Users</h1><br>
+        <h1 class="h3 mb-2 text-primary font-weight-bolder">{{ title|default:"Users" }}</h1><br>
         <a class="ml-auto btn btn-primary mb-3" href="{% url 'adduser' %}">Add User</a> 
     </div>
 
+    <!-- Search Bar -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Search Users</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" action="" class="form-inline">
+                <div class="form-group mr-3">
+                    <input type="text" 
+                           class="form-control" 
+                           name="search" 
+                           id="searchInput"
+                           placeholder="Search by Email, Name, or ID..." 
+                           value="{{ search_query|default:'' }}">
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-search"></i> Search
+                </button>
+                {% if search_query %}
+                <a href="{% url request.resolver_match.url_name %}" class="btn btn-secondary ml-2">
+                    <i class="fa-solid fa-times"></i> Clear
+                </a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
 
     <div class="card shadow mb-4" data-aos="fade-up" data-aos-duration="1000" data-aos-easing="ease-in-out">
         <div class="card-header py-3">
@@ -19,21 +45,66 @@
                         <tr>
                             <th>Email</th>
                             <th>Full Name</th>
-                            <!-- <th>Verification Status</th> -->
+                            <th>Verification Status</th>
+                            <th>Admin Approval</th>
+                            <th>Account Status</th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for user in users %}
                         <tr>
-                            <td> {{ user.email }} </td>
-                            <td> {{ user.last_name }}, {{user.first_name}} {% if user.middle_name %} {{user.middle_name}} {% endif %}</td>
-                            <!-- <td> {% if user.verified %} Verified {% else %} Not Verified {% endif %}</td> -->
-                            <td class="text-center">  
-                                <a href="{% url 'updateuser' user.id %}" class="btn btn-primary"><i class="fa-regular fa-pen-to-square"></i></a>
-                                <a href="{% url 'deleteuser' user.id %}" class="btn btn-danger"><i class="fa-solid fa-trash-can"></i></a>
+                            <td>{{ user.email }}</td>
+                            <td>{{ user.last_name }}, {{ user.first_name }}{% if user.middle_name %} {{ user.middle_name }}{% endif %}</td>
+                            <td>
+                                {% if user.verified %}
+                                    <span class="badge badge-success">Verified</span>
+                                {% else %}
+                                    <span class="badge badge-warning">Not Verified</span>
+                                {% endif %}
                             </td>
-                        </tr>   
+                            <td>
+                                {% if user.admin_approved %}
+                                    <span class="badge badge-success">Approved</span>
+                                {% else %}
+                                    <span class="badge badge-warning">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if user.is_active %}
+                                    <span class="badge badge-success">Active</span>
+                                {% else %}
+                                    <span class="badge badge-danger">Inactive</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-center">
+                                {% if not user.admin_approved %}
+                                    <form method="post" action="{% url 'approve_user' user.id %}" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-success btn-sm" title="Approve User">
+                                            <i class="fa-solid fa-check"></i> Approve
+                                        </button>
+                                    </form>
+                                    <form method="post" action="{% url 'reject_user' user.id %}" style="display: inline;">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger btn-sm" title="Reject User" onclick="return confirm('Are you sure you want to reject this user?');">
+                                            <i class="fa-solid fa-times"></i> Reject
+                                        </button>
+                                    </form>
+                                {% endif %}
+                                <a href="{% url 'updateuser' user.id %}" class="btn btn-primary btn-sm"><i class="fa-regular fa-pen-to-square"></i></a>
+                                <a href="{% url 'deleteuser' user.id %}" class="btn btn-danger btn-sm"><i class="fa-solid fa-trash-can"></i></a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>

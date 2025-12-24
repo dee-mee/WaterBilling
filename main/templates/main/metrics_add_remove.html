@@ -6,7 +6,7 @@
 {% block body %}
 <div class="container-fluid">
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
-        <h1 class="h3 mb-0 text-gray-800">{{ title|default:"Metrics" }}</h1>
+        <h1 class="h3 mb-0 text-gray-800">Add/Remove Meters</h1>
         <a href="#" class="d-none d-sm-inline-block btn btn-sm btn-primary shadow-sm" id="add-customer-btn"><i class="fas fa-plus fa-sm text-white-50"></i> Add New Meter</a>
     </div>
 
@@ -141,15 +141,27 @@
                     <tbody>
                         {% for client in clients %}
                         <tr>
-                            <td>{{ client.meter_number }}</td>
+                            <td>{{ client.meter_number|default:"Not Assigned" }}</td>
                             <td>{{ client.first_name }} {{ client.last_name }}</td>
                             <td>{% if client.user %}{{ client.user.id }}{% else %}N/A{% endif %}</td>
                             <td>{{ client.total_consumption }}</td>
-                            <td>{{ client.status }}</td>
                             <td>
-                                <button type="button" class="btn btn-primary edit-customer-btn" data-client-id="{{ client.id }}">Edit</button>
-                                <button type="button" class="btn btn-danger delete-customer-btn" data-client-id="{{ client.id }}">Delete</button>
+                                {% if client.status == 'Connected' %}
+                                    <span class="badge badge-success">Connected</span>
+                                {% elif client.status == 'Disconnected' %}
+                                    <span class="badge badge-danger">Disconnected</span>
+                                {% else %}
+                                    <span class="badge badge-warning">Pending</span>
+                                {% endif %}
                             </td>
+                            <td>
+                                <button type="button" class="btn btn-primary btn-sm edit-customer-btn" data-client-id="{{ client.id }}">Edit</button>
+                                <button type="button" class="btn btn-danger btn-sm delete-customer-btn" data-client-id="{{ client.id }}">Remove</button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">No meters found</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -218,7 +230,7 @@ $(document).ready(function() {
     // Delete customer
     $('#dataTable').on('click', '.delete-customer-btn', function() {
         var clientId = $(this).data('client-id');
-        if (confirm('Are you sure you want to delete this customer?')) {
+        if (confirm('Are you sure you want to remove this meter?')) {
             $.ajax({
                 url: '{% url "clientdelete" 0 %}'.replace('0', clientId),
                 type: 'POST',
@@ -229,11 +241,11 @@ $(document).ready(function() {
                     if (response.success) {
                         location.reload();
                     } else {
-                        alert('Error deleting customer.');
+                        alert('Error removing meter.');
                     }
                 },
                 error: function() {
-                    alert('Error deleting customer.');
+                    alert('Error removing meter.');
                 }
             });
         }
@@ -264,3 +276,4 @@ $(document).ready(function() {
 });
 </script>
 {% endblock %}
+

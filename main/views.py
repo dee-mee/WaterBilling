@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from .models import *
 from account.models import *
 from .forms import MetricsForm, BillForm, ClientForm, BulkUploadForm, CustomerForm
-from django.db.models import F, Sum
+from django.db.models import F, Sum, Q
 import sweetify
 from account.forms import *
 from main.decorators import *
@@ -13,6 +13,7 @@ import datetime
 from twilio.rest import Client as TwilClient
 import csv
 from django.http import HttpResponse, JsonResponse
+import json
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
@@ -209,12 +210,135 @@ def profile(request, pk):
     return render(request, 'main/profile.html', context)
 
 @user_passes_test(lambda u: u.is_superuser)
-def users(request):
+def users_all(request):
+    users_list = Account.objects.filter(is_superuser=False)
+    search_query = request.GET.get('search', '')
+    
+    if search_query:
+        users_list = users_list.filter(
+            Q(email__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(id__icontains=search_query)
+        )
+    
     context = {
-        'title': 'Users',
-        'users': Account.objects.filter(is_superuser=False)
+        'title': 'All Users',
+        'users': users_list,
+        'search_query': search_query
     }
     return render(request, 'main/users.html', context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def users_pending(request):
+    users_list = Account.objects.filter(is_superuser=False, admin_approved=False)
+    search_query = request.GET.get('search', '')
+    
+    if search_query:
+        users_list = users_list.filter(
+            Q(email__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(id__icontains=search_query)
+        )
+    
+    context = {
+        'title': 'Pending Approval',
+        'users': users_list,
+        'search_query': search_query
+    }
+    return render(request, 'main/users.html', context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def users_rejected(request):
+    users_list = Account.objects.filter(is_superuser=False, admin_approved=False, is_active=False)
+    search_query = request.GET.get('search', '')
+    
+    if search_query:
+        users_list = users_list.filter(
+            Q(email__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(id__icontains=search_query)
+        )
+    
+    context = {
+        'title': 'Rejected Users',
+        'users': users_list,
+        'search_query': search_query
+    }
+    return render(request, 'main/users.html', context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def users_approved(request):
+    users_list = Account.objects.filter(is_superuser=False, admin_approved=True)
+    search_query = request.GET.get('search', '')
+    
+    if search_query:
+        users_list = users_list.filter(
+            Q(email__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(id__icontains=search_query)
+        )
+    
+    context = {
+        'title': 'Approved Users',
+        'users': users_list,
+        'search_query': search_query
+    }
+    return render(request, 'main/users.html', context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def users_active(request):
+    users_list = Account.objects.filter(is_superuser=False, is_active=True)
+    search_query = request.GET.get('search', '')
+    
+    if search_query:
+        users_list = users_list.filter(
+            Q(email__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(id__icontains=search_query)
+        )
+    
+    context = {
+        'title': 'Active Users',
+        'users': users_list,
+        'search_query': search_query
+    }
+    return render(request, 'main/users.html', context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def users_inactive(request):
+    users_list = Account.objects.filter(is_superuser=False, is_active=False)
+    search_query = request.GET.get('search', '')
+    
+    if search_query:
+        users_list = users_list.filter(
+            Q(email__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(id__icontains=search_query)
+        )
+    
+    context = {
+        'title': 'Inactive Users',
+        'users': users_list,
+        'search_query': search_query
+    }
+    return render(request, 'main/users.html', context)
+
+
+# Keep the old 'users' view for backward compatibility, redirect to users_all
+@user_passes_test(lambda u: u.is_superuser)
+def users(request):
+    return redirect('users_all')
 
 @user_passes_test(lambda u: u.is_superuser)
 def update_user(request, pk):
@@ -245,6 +369,30 @@ def delete_user(request, pk):
         sweetify.toast(request, 'Deleted successfuly.')
         return HttpResponseRedirect(reverse('users'))
     return render(request, 'main/userdelete.html', context)
+
+@user_passes_test(lambda u: u.is_superuser)
+def approve_user(request, pk):
+    user = Account.objects.get(id=pk)
+    if request.method == 'POST':
+        user.admin_approved = True
+        user.is_active = True
+        user.save()
+        sweetify.success(request, f'User {user.email} has been approved successfully.')
+        return redirect('users_pending')
+    return redirect('users_pending')
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def reject_user(request, pk):
+    user = Account.objects.get(id=pk)
+    if request.method == 'POST':
+        user.admin_approved = False
+        user.is_active = False
+        user.save()
+        sweetify.success(request, f'User {user.email} has been rejected.')
+        return redirect('users_pending')
+    return redirect('users_pending')
+
 
 @user_passes_test(lambda u: u.is_superuser)
 def add_user(request):
@@ -317,6 +465,16 @@ def client_delete(request,pk):
 
 def metrics(request):
     clients = Client.objects.all()
+    search_query = request.GET.get('search', '')
+    
+    if search_query:
+        clients = clients.filter(
+            Q(meter_number__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(id__icontains=search_query)
+        )
+    
     total_meters = clients.count()
     total_consumption_all = WaterBill.objects.aggregate(Sum('meter_consumption'))['meter_consumption__sum'] or 0
     connected_clients = Client.objects.filter(status='Connected').count()
@@ -334,9 +492,202 @@ def metrics(request):
         'connected_clients': connected_clients,
         'disconnected_clients': disconnected_clients,
         'pending_clients': pending_clients,
-        'form': CustomerForm()
+        'form': CustomerForm(),
+        'search_query': search_query
     }
     return render(request, 'main/metrics.html', context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def metrics_active(request):
+    clients = Client.objects.filter(status='Connected')
+    search_query = request.GET.get('search', '')
+    
+    if search_query:
+        clients = clients.filter(
+            Q(meter_number__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(id__icontains=search_query)
+        )
+    
+    total_meters = clients.count()
+    total_consumption_all = WaterBill.objects.aggregate(Sum('meter_consumption'))['meter_consumption__sum'] or 0
+    
+    for client in clients:
+        client.total_consumption = WaterBill.objects.filter(name=client).aggregate(Sum('meter_consumption'))['meter_consumption__sum'] or 0
+
+    context = {
+        'title': 'Active Meters',
+        'clients': clients,
+        'total_meters': total_meters,
+        'total_consumption': total_consumption_all,
+        'connected_clients': clients.count(),
+        'disconnected_clients': 0,
+        'pending_clients': 0,
+        'form': CustomerForm(),
+        'search_query': search_query
+    }
+    return render(request, 'main/metrics.html', context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def metrics_inactive(request):
+    clients = Client.objects.filter(status__in=['Disconnected', 'Pending'])
+    search_query = request.GET.get('search', '')
+    
+    if search_query:
+        clients = clients.filter(
+            Q(meter_number__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(id__icontains=search_query)
+        )
+    
+    disconnected_clients = Client.objects.filter(status='Disconnected').count()
+    pending_clients = Client.objects.filter(status='Pending').count()
+    total_meters = clients.count()
+    total_consumption_all = WaterBill.objects.aggregate(Sum('meter_consumption'))['meter_consumption__sum'] or 0
+    
+    for client in clients:
+        client.total_consumption = WaterBill.objects.filter(name=client).aggregate(Sum('meter_consumption'))['meter_consumption__sum'] or 0
+
+    context = {
+        'title': 'Inactive Meters',
+        'clients': clients,
+        'total_meters': total_meters,
+        'total_consumption': total_consumption_all,
+        'connected_clients': 0,
+        'disconnected_clients': disconnected_clients,
+        'pending_clients': pending_clients,
+        'form': CustomerForm(),
+        'search_query': search_query
+    }
+    return render(request, 'main/metrics.html', context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def metrics_add_remove(request):
+    clients = Client.objects.all()
+    search_query = request.GET.get('search', '')
+    
+    if search_query:
+        clients = clients.filter(
+            Q(meter_number__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(id__icontains=search_query)
+        )
+    
+    total_meters = clients.count()
+    total_consumption_all = WaterBill.objects.aggregate(Sum('meter_consumption'))['meter_consumption__sum'] or 0
+    connected_clients = Client.objects.filter(status='Connected').count()
+    disconnected_clients = Client.objects.filter(status='Disconnected').count()
+    pending_clients = Client.objects.filter(status='Pending').count()
+
+    for client in clients:
+        client.total_consumption = WaterBill.objects.filter(name=client).aggregate(Sum('meter_consumption'))['meter_consumption__sum'] or 0
+
+    context = {
+        'title': 'Add/Remove Meters',
+        'clients': clients,
+        'total_meters': total_meters,
+        'total_consumption': total_consumption_all,
+        'connected_clients': connected_clients,
+        'disconnected_clients': disconnected_clients,
+        'pending_clients': pending_clients,
+        'form': CustomerForm(),
+        'search_query': search_query,
+        'show_add_remove': True
+    }
+    return render(request, 'main/metrics_add_remove.html', context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def assign_meter(request):
+    all_clients = Client.objects.all()
+    search_query = request.GET.get('search', '')
+    
+    if search_query:
+        all_clients = all_clients.filter(
+            Q(meter_number__icontains=search_query) |
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(id__icontains=search_query)
+        )
+    
+    context = {
+        'title': 'Assign Meter',
+        'clients': all_clients,
+        'search_query': search_query
+    }
+    
+    if request.method == 'POST':
+        client_id = request.POST.get('client_id')
+        meter_number = request.POST.get('meter_number')
+        
+        if client_id and meter_number:
+            try:
+                client = Client.objects.get(id=client_id)
+                # Check if meter number is already assigned
+                if Client.objects.filter(meter_number=meter_number).exclude(id=client_id).exists():
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({'success': False, 'message': 'Meter number already assigned to another client.'})
+                    sweetify.error(request, 'Meter number already assigned to another client.')
+                else:
+                    client.meter_number = meter_number
+                    client.save()
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({'success': True, 'message': 'Meter assigned successfully.'})
+                    sweetify.success(request, 'Meter assigned successfully.')
+                    return redirect('assign_meter')
+            except Client.DoesNotExist:
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    return JsonResponse({'success': False, 'message': 'Client not found.'})
+                sweetify.error(request, 'Client not found.')
+    
+    return render(request, 'main/assign_meter.html', context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def meters_map(request):
+    filter_type = request.GET.get('filter', 'all')  # all, active, inactive
+    clients = Client.objects.exclude(latitude__isnull=True).exclude(longitude__isnull=True)
+    
+    if filter_type == 'active':
+        clients = clients.filter(status='Connected')
+    elif filter_type == 'inactive':
+        clients = clients.filter(status__in=['Disconnected', 'Pending'])
+    
+    # Calculate total consumption for each client
+    for client in clients:
+        client.total_consumption = WaterBill.objects.filter(name=client).aggregate(Sum('meter_consumption'))['meter_consumption__sum'] or 0
+    
+    # Convert to JSON for map
+    meters_data = []
+    for client in clients:
+        if client.latitude and client.longitude:
+            meters_data.append({
+                'id': client.id,
+                'meter_number': client.meter_number or 'N/A',
+                'name': f"{client.first_name} {client.last_name}",
+                'address': client.address,
+                'status': client.status,
+                'latitude': float(client.latitude),
+                'longitude': float(client.longitude),
+                'total_consumption': client.total_consumption,
+                'contact_number': client.contact_number or 'N/A',
+            })
+    
+    context = {
+        'title': 'Meters Map',
+        'meters_data': json.dumps(meters_data),
+        'filter_type': filter_type,
+        'total_meters': len(meters_data),
+        'active_count': Client.objects.filter(status='Connected').exclude(latitude__isnull=True).exclude(longitude__isnull=True).count(),
+        'inactive_count': Client.objects.filter(status__in=['Disconnected', 'Pending']).exclude(latitude__isnull=True).exclude(longitude__isnull=True).count(),
+    }
+    return render(request, 'main/meters_map.html', context)
 
 
 @user_passes_test(lambda u: u.is_superuser)

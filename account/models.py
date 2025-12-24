@@ -25,6 +25,7 @@ class AccountManager(UserManager):
         extra_fields.setdefault("is_superuser", True)
         extra_fields.setdefault("last_name", "Administator")
         extra_fields.setdefault("first_name", "Water Billing")
+        extra_fields.setdefault("admin_approved", True)  # Superusers are auto-approved
 
         assert extra_fields["is_staff"]
         assert extra_fields["is_superuser"]
@@ -36,6 +37,7 @@ class Account(AbstractUser):
     email = models.EmailField(unique=True)
     otp = models.IntegerField(null=True)
     verified = models.BooleanField(default=False)
+    admin_approved = models.BooleanField(default=False, help_text="Designates whether this user has been approved by an admin.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     USERNAME_FIELD = "email"

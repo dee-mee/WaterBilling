@@ -1,0 +1,165 @@
+{% extends 'main/layout.html' %}
+{% load static %}
+{% load sweetify %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Assign Meter</h1>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Search Clients</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" action="" class="form-inline">
+                <div class="form-group mr-3">
+                    <input type="text" 
+                           class="form-control" 
+                           name="search" 
+                           id="searchInput"
+                           placeholder="Search by Meter Number, Name, or ID..." 
+                           value="{{ search_query|default:'' }}">
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fa-solid fa-search"></i> Search
+                </button>
+                {% if search_query %}
+                <a href="{% url request.resolver_match.url_name %}" class="btn btn-secondary ml-2">
+                    <i class="fa-solid fa-times"></i> Clear
+                </a>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Assign Meter to Client</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered tally-table" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Client ID</th>
+                            <th>Client Name</th>
+                            <th>Current Meter No.</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for client in clients %}
+                        <tr>
+                            <td>{{ client.id }}</td>
+                            <td>{{ client.first_name }} {{ client.last_name }}</td>
+                            <td>{{ client.meter_number|default:"Not Assigned" }}</td>
+                            <td>
+                                {% if client.status == 'Connected' %}
+                                    <span class="badge badge-success">Connected</span>
+                                {% elif client.status == 'Disconnected' %}
+                                    <span class="badge badge-danger">Disconnected</span>
+                                {% else %}
+                                    <span class="badge badge-warning">Pending</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-primary btn-sm assign-meter-btn" 
+                                        data-client-id="{{ client.id }}" 
+                                        data-client-name="{{ client.first_name }} {{ client.last_name }}"
+                                        data-current-meter="{{ client.meter_number|default:'' }}">
+                                    Assign Meter
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center">No clients found</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Assign Meter Modal -->
+<div class="modal fade" id="assignMeterModal" tabindex="-1" role="dialog" aria-labelledby="assignMeterModalLabel" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignMeterModalLabel">Assign Meter</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form method="post" id="assign-meter-form">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <input type="hidden" name="client_id" id="assign-client-id">
+                    <div class="form-group">
+                        <label for="client-name">Client Name:</label>
+                        <input type="text" class="form-control" id="client-name" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="meter-number">Meter Number:</label>
+                        <input type="number" class="form-control" name="meter_number" id="meter-number" required min="1">
+                        <small class="form-text text-muted">Enter a unique meter number for this client.</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Assign Meter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Assign meter button click
+    $('#dataTable').on('click', '.assign-meter-btn', function() {
+        var clientId = $(this).data('client-id');
+        var clientName = $(this).data('client-name');
+        var currentMeter = $(this).data('current-meter');
+        
+        $('#assign-client-id').val(clientId);
+        $('#client-name').val(clientName);
+        $('#meter-number').val(currentMeter || '');
+        
+        $('#assignMeterModal').modal('show');
+    });
+
+    // Handle form submission
+    $('#assign-meter-form').on('submit', function(e) {
+        e.preventDefault();
+        var form = $(this);
+        
+        $.ajax({
+            url: '{% url "assign_meter" %}',
+            type: 'POST',
+            data: form.serialize(),
+            success: function(response) {
+                if (response.success) {
+                    $('#assignMeterModal').modal('hide');
+                    location.reload();
+                } else {
+                    alert(response.message || 'Error assigning meter.');
+                }
+            },
+            error: function() {
+                alert('Error assigning meter.');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
+
