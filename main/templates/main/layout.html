@@ -291,35 +291,35 @@
                     }
                     
                     table.DataTable({
-                        responsive: true,
-                        pading: true,
-                        pageLength: 10,
-                        lengthChange: true,
+            responsive: true,
+            pading: true,
+            pageLength: 10,
+            lengthChange: true,
                         autoWidth: false,
-                        searching: true,
-                        bInfo: true,
-                        bSort: true,
-                        dom: 'Bfrtipl',
+            searching: true,
+            bInfo: true,
+            bSort: true,
+            dom: 'Bfrtipl',
                         columnDefs: [
                             { targets: '_all', orderable: true }
                         ],
-                        searchPanes: {
-                            viewTotal: true
-                        },
-                        buttons: [
-                            {
-                                extend: 'print',
-                                text: 'Print',
-                                className: 'btn btn-success',
-                                titleAttr: 'Print',
-                            },
-                            {
-                                extend: 'pdf',
-                                text: 'PDF',
-                                className: 'ml-2 btn btn-secondary',
-                                titleAttr: 'PDF',
-                            },
-                        ]
+            searchPanes: {
+            viewTotal: true
+            },
+            buttons: [
+                {
+                    extend: 'print',
+                    text: 'Print',
+                    className: 'btn btn-success',
+                    titleAttr: 'Print',
+                },
+                {
+                    extend: 'pdf',
+                    text: 'PDF',
+                    className: 'ml-2 btn btn-secondary',
+                    titleAttr: 'PDF',
+                },
+            ]
                     });
                 } catch(e) {
                     console.warn('DataTables initialization error:', e);
