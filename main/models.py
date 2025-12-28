@@ -45,17 +45,37 @@ class WaterBill(models.Model):
 
     
     def compute_bill(self):
-        metric = Metric.objects.get(id=1)
-        consump_amount = metric.consump_amount
-        return self.meter_consumption * consump_amount
+        try:
+            metric = Metric.objects.first()
+            if not metric:
+                # If no metric exists, create one with default values
+                metric = Metric.objects.create(
+                    consump_amount=1.0,
+                    penalty_amount=100.0
+                )
+            consump_amount = metric.consump_amount
+            return self.meter_consumption * consump_amount if self.meter_consumption else 0
+        except Exception as e:
+            # Fallback in case of any error
+            print(f"Error computing bill: {str(e)}")
+            return self.meter_consumption * 1.0 if self.meter_consumption else 0
 
     def penalty(self):
-        if self.penaltydate == datetime.date.today():
-            metric = Metric.objects.get(id=1)
-            penalty_cost = metric.penalty_amount
-            return penalty_cost
-        else:
-            return 0
+        if self.penaltydate and self.penaltydate == datetime.date.today():
+            try:
+                metric = Metric.objects.first()
+                if not metric:
+                    # If no metric exists, create one with default values
+                    metric = Metric.objects.create(
+                        consump_amount=1.0,
+                        penalty_amount=100.0
+                    )
+                return metric.penalty_amount
+            except Exception as e:
+                # Fallback in case of any error
+                print(f"Error calculating penalty: {str(e)}")
+                return 100.0  # Default penalty amount
+        return 0
 
     
     def payable(self):
