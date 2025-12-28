@@ -1,7 +1,12 @@
 import os
-from django.shortcuts import render, redirect, HttpResponseRedirect
+from django.shortcuts import render, redirect, HttpResponseRedirect, HttpResponse
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.conf import settings
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.units import inch
+from reportlab.pdfgen import canvas
+from django.core.exceptions import ObjectDoesNotExist
 from .models import *
 from account.models import *
 from .forms import MetricsForm, BillForm, ClientForm, BulkUploadForm, CustomerForm
@@ -45,40 +50,85 @@ def export_clients_csv(request):
 @login_required(login_url='login')
 @verified_or_superuser
 def download_invoice(request, pk):
-    bill = WaterBill.objects.get(id=pk)
-    response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'attachment; filename="invoice_{bill.id}.pdf"'
+    try:
+        # Get the bill or return 404 if not found
+        bill = WaterBill.objects.get(id=pk)
+        
+        # Create the HttpResponse object with the appropriate PDF headers
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="invoice_{bill.id}.pdf"'
 
-    p = canvas.Canvas(response, pagesize=letter)
-    width, height = letter
+        # Create the PDF object, using the response object as its "file."
+        p = canvas.Canvas(response, pagesize=letter)
+        width, height = letter
 
-    logo_path = settings.BASE_DIR / 'main/static/sb_admin/img/logo.png'
-    p.drawImage(logo_path, inch, height - 1.5 * inch, width=1*inch, height=1*inch)
+        # Add logo if it exists
+        logo_path = os.path.join(settings.BASE_DIR, 'main/static/sb_admin/img/logo.png')
+        if os.path.exists(logo_path):
+            try:
+                p.drawImage(logo_path, inch, height - 1.5 * inch, width=1*inch, height=1*inch)
+            except Exception as e:
+                print(f"Error adding logo to PDF: {str(e)}")
+                # Continue without the logo if there's an error
 
-    p.setFont("Helvetica-Bold", 16)
-    p.drawString(2 * inch, height - inch, "Water Billing System")
+        # Set font and draw the header
+        p.setFont("Helvetica-Bold", 16)
+        p.drawString(2 * inch, height - inch, "Water Billing System")
 
-    p.setFont("Helvetica", 12)
-    p.drawString(inch, height - 2 * inch, f"Invoice for: {bill.name.first_name} {bill.name.last_name}")
-    p.drawString(inch, height - 2.25 * inch, f"Meter Number: {bill.name.meter_number}")
-    p.drawString(inch, height - 2.5 * inch, f"Address: {bill.name.address}")
+        # Customer Information
+        p.setFont("Helvetica", 12)
+        y_position = height - 2 * inch
+        p.drawString(inch, y_position, f"Invoice for: {bill.name.first_name} {bill.name.last_name}")
+        y_position -= 0.25 * inch
+        p.drawString(inch, y_position, f"Meter Number: {bill.name.meter_number}")
+        y_position -= 0.25 * inch
+        p.drawString(inch, y_position, f"Address: {bill.name.address}")
 
-    p.setFont("Helvetica-Bold", 14)
-    p.drawString(inch, height - 3 * inch, "Bill Details")
+        # Bill Details Header
+        y_position -= 0.5 * inch
+        p.setFont("Helvetica-Bold", 14)
+        p.drawString(inch, y_position, "Bill Details")
 
-    p.setFont("Helvetica", 12)
-    p.drawString(inch, height - 3.25 * inch, f"Billing Period: {bill.billing_date.strftime('%B %Y') if bill.billing_date else 'N/A'}")
-    p.drawString(inch, height - 3.5 * inch, f"Due Date: {bill.duedate.strftime('%Y-%m-%d') if bill.duedate else 'N/A'}")
-    p.drawString(inch, height - 3.75 * inch, f"Previous Reading: {bill.previous_reading}")
-    p.drawString(inch, height - 4 * inch, f"Present Reading: {bill.present_reading}")
-    p.drawString(inch, height - 4.25 * inch, f"Water Consumption: {bill.meter_consumption}")
-    p.drawString(inch, height - 4.5 * inch, f"Total Bill: {bill.payable()}")
-    p.drawString(inch, height - 4.75 * inch, f"Status: {bill.payment_status}")
+        # Bill Details
+        p.setFont("Helvetica", 12)
+        y_position -= 0.25 * inch
+        if bill.billing_date:
+            p.drawString(inch, y_position, f"Billing Period: {bill.billing_date.strftime('%B %Y')}")
+        else:
+            p.drawString(inch, y_position, "Billing Period: N/A")
+        
+        y_position -= 0.25 * inch
+        if bill.duedate:
+            p.drawString(inch, y_position, f"Due Date: {bill.duedate.strftime('%Y-%m-%d')}")
+        else:
+            p.drawString(inch, y_position, "Due Date: N/A")
+        
+        y_position -= 0.25 * inch
+        p.drawString(inch, y_position, f"Previous Reading: {bill.previous_reading or 'N/A'}")
+        y_position -= 0.25 * inch
+        p.drawString(inch, y_position, f"Present Reading: {bill.present_reading or 'N/A'}")
+        y_position -= 0.25 * inch
+        p.drawString(inch, y_position, f"Water Consumption: {bill.meter_consumption or 'N/A'}")
+        y_position -= 0.25 * inch
+        p.drawString(inch, y_position, f"Total Bill: {bill.payable() if hasattr(bill, 'payable') else 'N/A'}")
+        y_position -= 0.25 * inch
+        p.drawString(inch, y_position, f"Status: {bill.payment_status or 'N/A'}")
 
-    p.showPage()
-    p.save()
+        # Add a footer
+        p.setFont("Helvetica", 8)
+        p.drawString(inch, 0.5 * inch, f"Generated on: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
-    return response
+        # Close the PDF object cleanly, and we're done.
+        p.showPage()
+        p.save()
+
+        return response
+
+    except ObjectDoesNotExist:
+        return HttpResponse("Bill not found", status=404)
+    except Exception as e:
+        print(f"Error generating PDF: {str(e)}")
+        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
 
 
 @user_passes_test(lambda u: u.is_superuser)
