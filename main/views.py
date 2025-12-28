@@ -140,9 +140,9 @@ def ongoing_bills(request):
 @verified_or_superuser
 def history_bills(request):
     if request.user.is_superuser:
-        billshistory = WaterBill.objects.filter(payment_status='Paid')
+        billshistory = WaterBill.objects.filter(payment_status__in=['Paid', 'Pending'])
     else:
-        billshistory = WaterBill.objects.filter(payment_status='Paid', name__user=request.user)
+        billshistory = WaterBill.objects.filter(payment_status__in=['Paid', 'Pending'], approval_status='Approved', name__user=request.user)
     context = {
         'title': 'Bills History',
         'billshistory': billshistory,
@@ -161,9 +161,14 @@ def update_bills(request, pk):
     if request.method == 'POST':
         form = BillForm(request.POST, instance=bill)
         if form.is_valid():
-            form.save()
+            print('approval_status in cleaned_data:', form.cleaned_data.get('approval_status'))
+            print('approval_status on instance before save:', bill.approval_status)
+            bill = form.save()
+            print('approval_status on instance after save:', bill.approval_status)
             sweetify.toast(request, f'{bill} updated successfully.')
             return HttpResponseRedirect(reverse('ongoingbills'))
+        else:
+            print('BillForm errors:', form.errors)
     return render(request, 'main/billupdate.html', context)
 
 
@@ -908,7 +913,17 @@ def payment_cancel(request):
 def user_dashboard(request):
     try:
         client = Client.objects.get(user=request.user)
-        bills = WaterBill.objects.filter(name=client, approval_status='Approved').order_by('-billing_date')
+        bills_qs = WaterBill.objects.filter(name=client, approval_status='Approved', payment_status__in=['Paid', 'Pending']).order_by('-billing_date')
+        bills = [
+            {
+                'billing_date': bill.billing_date.strftime('%Y-%m-%d') if bill.billing_date else '',
+                'previous_reading': bill.previous_reading,
+                'present_reading': bill.present_reading,
+                'meter_consumption': bill.meter_consumption,
+                'payment_status': bill.payment_status,
+            }
+            for bill in bills_qs
+        ]
         metrics = Metric.objects.get(user=request.user)
         print(f"Client found: {client.first_name} {client.last_name}, Meter: {client.meter_number}")
         print(f"Metrics found: Consumption Amount: {metrics.consump_amount}, Penalty Amount: {metrics.penalty_amount}")
@@ -924,7 +939,8 @@ def user_dashboard(request):
     context = {
         'title': 'My Meter',
         'client': client,
-        'bills': bills,
+        'bills': bills,  # list of dicts for chart.js
+        'bills_qs': bills_qs if client else [],  # queryset for table display
         'metrics': metrics,
     }
     return render(request, 'main/user_dashboard.html', context)

@@ -24,6 +24,9 @@
                             <th>Penalty</th>
                             <th>Payable Amount</th>
                             <th>Payment Status</th>
+                            {% if request.user.is_superuser %}
+                            <th>Approval Status</th>
+                            {% endif %}
                             <th>Action</th>
                             {% if request.user.is_superuser %}
                             <th>Action</th> 
@@ -41,6 +44,9 @@
                             <td> {{bill.penalty}}</td> 
                             <td class="font-weight-bolder text-primary"> ₱{{bill.payable}} </td> 
                             <td> {{bill.payment_status}}</td>
+                            {% if request.user.is_superuser %}
+                            <td> {{bill.approval_status}} </td>
+                            {% endif %}
                             <td><a href="{% url 'download_invoice' bill.id %}" class="btn btn-secondary"><i class="fa-solid fa-download"></i></a></td>
                             {% if request.user.is_superuser %}
                             <td class="text-center">  
