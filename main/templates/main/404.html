@@ -1,0 +1,27 @@
+{% extends 'main/layout.html' %}
+{% block body %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-8 text-center">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h1 class="display-1 text-danger">404</h1>
+                    <h2 class="mb-4">Bill Not Found</h2>
+                    <p class="lead">{{ message|default:"The bill you are looking for could not be found." }}</p>
+                    <p>This could be because:</p>
+                    <ul class="list-unstyled">
+                        <li>The bill has been deleted</li>
+                        <li>The bill ID is incorrect</li>
+                        <li>You don't have permission to view this bill</li>
+                    </ul>
+                    <div class="mt-4">
+                        <a href="{% url 'user_dashboard' %}" class="btn btn-primary">
+                            <i class="fas fa-home"></i> Return to Dashboard
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

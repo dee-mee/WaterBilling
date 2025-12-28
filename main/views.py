@@ -47,12 +47,30 @@ def export_clients_csv(request):
 
     return response
 
+from django.shortcuts import get_object_or_404
+import logging
+from django.utils import timezone
+
+logger = logging.getLogger(__name__)
+
 @login_required(login_url='login')
 @verified_or_superuser
 def download_invoice(request, pk):
     try:
+        logger.info(f"Attempting to download invoice for bill ID: {pk}")
+        
         # Get the bill or return 404 if not found
-        bill = WaterBill.objects.get(id=pk)
+        try:
+            bill = WaterBill.objects.get(id=pk)
+            logger.info(f"Found bill: {bill.id} for {bill.name}")
+        except WaterBill.DoesNotExist:
+            logger.error(f"Bill with ID {pk} not found in database")
+            return render(request, 'main/404.html', {'message': 'The requested bill was not found.'}, status=404)
+        except Exception as e:
+            logger.error(f"Error retrieving bill {pk}: {str(e)}")
+            return render(request, 'main/error.html', 
+                        {'message': 'An error occurred while retrieving the bill.', 'error': str(e)}, 
+                        status=500)
         
         # Create the HttpResponse object with the appropriate PDF headers
         response = HttpResponse(content_type='application/pdf')
@@ -124,11 +142,11 @@ def download_invoice(request, pk):
 
         return response
 
-    except ObjectDoesNotExist:
-        return HttpResponse("Bill not found", status=404)
     except Exception as e:
-        print(f"Error generating PDF: {str(e)}")
-        return HttpResponse(f"Error generating PDF: {str(e)}", status=500)
+        logger.error(f"Unexpected error generating PDF for bill {pk}: {str(e)}", exc_info=True)
+        return render(request, 'main/error.html', 
+                    {'message': 'An unexpected error occurred while generating the PDF.', 'error': str(e)}, 
+                    status=500)
 
 
 @user_passes_test(lambda u: u.is_superuser)

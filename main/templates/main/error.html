@@ -1,0 +1,55 @@
+{% extends 'main/layout.html' %}
+{% block body %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">Error Processing Your Request</h4>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-danger">
+                        <h5 class="alert-heading">{{ message|default:"An error occurred while processing your request." }}</h5>
+                        {% if error %}
+                            <hr>
+                            <p class="mb-0"><strong>Details:</strong> {{ error }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mt-4">
+                        <p>We apologize for the inconvenience. The error has been logged and our team has been notified.</p>
+                        <p>Please try the following:</p>
+                        <ul>
+                            <li>Refresh the page and try again</li>
+                            <li>Check if the information you entered is correct</li>
+                            <li>Return to the dashboard and try again later</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <a href="{% url 'user_dashboard' %}" class="btn btn-primary">
+                            <i class="fas fa-home"></i> Return to Dashboard
+                        </a>
+                        <button onclick="window.history.back()" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left"></i> Go Back
+                        </button>
+                    </div>
+                    
+                    {% if request.user.is_superuser and error %}
+                    <div class="mt-4">
+                        <div class="card bg-light">
+                            <div class="card-header">
+                                <h6 class="mb-0">Technical Details (Admin Only)</h6>
+                            </div>
+                            <div class="card-body">
+                                <pre class="small text-muted mb-0">{{ error }}</pre>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
