@@ -1,6 +1,12 @@
 {% extends 'main/layout.html' %}
 {% load static %}
 
+{% block head %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""/>
+{% endblock %}
+
 {% block body %}
 <div class="container-fluid">
     <div class="d-sm-flex align-items-center justify-content-between mb-4">
@@ -50,30 +56,19 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
-<!-- Leaflet CSS -->
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-      crossorigin=""/>
-
-<!-- Leaflet JS -->
+{% block scripts %}
+{{ block.super }}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
 
 <script>
-    // Initialize map - Default to Nairobi, Kenya
-    var map = L.map('map').setView([-1.2921, 36.8219], 6); // Default to Kenya (Nairobi)
-    
-    // Add OpenStreetMap tiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19
-    }).addTo(map);
-    
     // Meter data from Django
-    var metersData = {{ meters_data|safe }};
-    
+    // Use JSON.parse to avoid template output confusing JS parsers and to ensure valid JSON at runtime.
+    var metersData = JSON.parse('{{ meters_data|escapejs }}');
+
     // Color based on status
     function getMarkerColor(status) {
         if (status === 'Connected') {
@@ -84,7 +79,7 @@
             return 'orange';
         }
     }
-    
+
     // Icon based on status
     function createCustomIcon(status) {
         var color = getMarkerColor(status);
@@ -95,50 +90,94 @@
             iconAnchor: [10, 10]
         });
     }
-    
-    // Add markers to map
-    var markers = [];
-    metersData.forEach(function(meter) {
-        var marker = L.marker([meter.latitude, meter.longitude], {
-            icon: createCustomIcon(meter.status)
-        }).addTo(map);
-        
-        // Popup content
-        var popupContent = `
-            <div style="min-width: 200px;">
-                <h6><strong>Meter #${meter.meter_number}</strong></h6>
-                <p><strong>Customer:</strong> ${meter.name}</p>
-                <p><strong>Status:</strong> <span class="badge badge-${meter.status === 'Connected' ? 'success' : meter.status === 'Disconnected' ? 'danger' : 'warning'}">${meter.status}</span></p>
-                <p><strong>Address:</strong> ${meter.address}</p>
-                <p><strong>Contact:</strong> ${meter.contact_number}</p>
-                <p><strong>Total Consumption:</strong> ${meter.total_consumption} m³</p>
-                <button class="btn btn-sm btn-primary mt-2" onclick="showMeterDetails(${meter.id})">View Details</button>
-            </div>
-        `;
-        
-        marker.bindPopup(popupContent);
-        
-        // Store meter data in marker
-        marker.meterData = meter;
-        markers.push(marker);
-        
-        // Click event to show details modal
-        marker.on('click', function() {
-            showMeterDetails(meter.id);
+
+    function initMetersMap() {
+        var mapEl = document.getElementById('map');
+        if (!mapEl) return;
+        if (typeof L === 'undefined') {
+            console.error('Leaflet (L) not loaded');
+            return;
+        }
+
+        // Initialize map - Default to Nairobi, Kenya
+        var map = L.map('map').setView([-1.2921, 36.8219], 6);
+
+        // Primary tile layer
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19,
+            crossOrigin: true
         });
-    });
-    
-    // Fit map to show all markers
-    if (markers.length > 0) {
-        var group = new L.featureGroup(markers);
-        map.fitBounds(group.getBounds().pad(0.1));
+
+        // Fallback tile layer (in case OSM gets blocked/rate-limited)
+        var carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+            subdomains: 'abcd',
+            maxZoom: 20,
+            crossOrigin: true
+        });
+
+        osm.on('tileerror', function(e) {
+            console.warn('OSM tile error, switching to fallback tiles', e);
+            try {
+                map.removeLayer(osm);
+            } catch (err) {
+            }
+            carto.addTo(map);
+        });
+
+        osm.addTo(map);
+
+        // Add markers to map
+        var markers = [];
+        metersData.forEach(function(meter) {
+            var marker = L.marker([meter.latitude, meter.longitude], {
+                icon: createCustomIcon(meter.status)
+            }).addTo(map);
+
+            var popupContent = `
+                <div style="min-width: 200px;">
+                    <h6><strong>Meter #${meter.meter_number}</strong></h6>
+                    <p><strong>Customer:</strong> ${meter.name}</p>
+                    <p><strong>Status:</strong> <span class="badge badge-${meter.status === 'Connected' ? 'success' : meter.status === 'Disconnected' ? 'danger' : 'warning'}">${meter.status}</span></p>
+                    <p><strong>Address:</strong> ${meter.address}</p>
+                    <p><strong>Contact:</strong> ${meter.contact_number}</p>
+                    <p><strong>Total Consumption:</strong> ${meter.total_consumption} m³</p>
+                    <button class="btn btn-sm btn-primary mt-2" onclick="showMeterDetails(${meter.id})">View Details</button>
+                </div>
+            `;
+
+            marker.bindPopup(popupContent);
+            marker.meterData = meter;
+            markers.push(marker);
+
+            marker.on('click', function() {
+                showMeterDetails(meter.id);
+            });
+        });
+
+        if (markers.length > 0) {
+            var group = new L.featureGroup(markers);
+            map.fitBounds(group.getBounds().pad(0.1));
+        }
+
+        // On some layouts (esp. when fonts/CSS load late), Leaflet needs a resize tick
+        setTimeout(function() {
+            map.invalidateSize();
+        }, 0);
+        setTimeout(function() {
+            map.invalidateSize();
+        }, 250);
+
+        // Make map available for debugging
+        window._metersMap = map;
     }
-    
+
     // Function to show meter details in modal
     function showMeterDetails(meterId) {
         var meter = metersData.find(m => m.id === meterId);
         if (!meter) return;
-        
+
         var detailsHtml = `
             <table class="table table-bordered">
                 <tr>
@@ -171,13 +210,18 @@
                 </tr>
             </table>
         `;
-        
+
         document.getElementById('meterDetailsContent').innerHTML = detailsHtml;
         $('#meterDetailsModal').modal('show');
     }
-    
-    // Make function available globally
+
     window.showMeterDetails = showMeterDetails;
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initMetersMap);
+    } else {
+        initMetersMap();
+    }
 </script>
 
 <style>
@@ -187,4 +231,3 @@
     }
 </style>
 {% endblock %}
-
