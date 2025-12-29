@@ -19,6 +19,10 @@ def verified_or_superuser(function):
         # If not verified, redirect to verification
         elif not profile.verified:
             return HttpResponseRedirect(reverse('verify'))
+        # If rejected, show rejection message
+        elif hasattr(profile, 'rejected') and profile.rejected:
+            sweetify.error(request, 'Your account has been rejected by an administrator. Please contact support for assistance.')
+            return HttpResponseRedirect(reverse('login'))
         # If not approved by admin, show message and redirect to login
         else:
             sweetify.error(request, 'Your account is pending admin approval. Please wait for an administrator to approve your account.')

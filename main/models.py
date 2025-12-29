@@ -93,3 +93,35 @@ class Metric(models.Model):
     user = models.OneToOneField(Account, on_delete=models.CASCADE, null=True)
     consump_amount = models.FloatField(default=1, null=True)
     penalty_amount = models.FloatField(default=1, null=True)
+
+
+class SupportTicket(models.Model):
+    STATUS_CHOICES = [
+        ('Open', 'Open'),
+        ('In Progress', 'In Progress'),
+        ('Resolved', 'Resolved'),
+        ('Closed', 'Closed'),
+    ]
+    
+    PRIORITY_CHOICES = [
+        ('Low', 'Low'),
+        ('Medium', 'Medium'),
+        ('High', 'High'),
+        ('Urgent', 'Urgent'),
+    ]
+    
+    user = models.ForeignKey(Account, on_delete=models.CASCADE, related_name='support_tickets')
+    subject = models.CharField(max_length=200)
+    message = models.TextField()
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Open')
+    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='Medium')
+    admin_response = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    resolved_at = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"Ticket #{self.id} - {self.subject} by {self.user.email}"

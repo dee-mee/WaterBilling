@@ -49,7 +49,12 @@ urlpatterns = [
     path('create-checkout-session/<int:pk>', views.create_checkout_session, name='create_checkout_session'),
     path('payment-success/<int:pk>', views.payment_success, name='payment_success'),
     path('payment-cancel/', views.payment_cancel, name='payment_cancel'),
-    path('my-meter/', views.user_dashboard, name='user_dashboard')
+    path('my-meter/', views.user_dashboard, name='user_dashboard'),
+    path('settings/', views.settings_view, name='settings'),
+    path('support/', views.user_support, name='user_support'),
+    path('contact-support/', views.contact_support, name='contact_support'),
+    path('support-tickets/', views.support_tickets, name='support_tickets'),
+    path('support-ticket/update/<int:pk>', views.update_ticket, name='update_ticket'),
 
     
 ]

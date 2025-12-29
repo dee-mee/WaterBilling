@@ -1,0 +1,193 @@
+{% extends 'main/layout.html' %}
+{% load static %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Support</h1>
+        <button type="button" class="btn btn-primary" data-toggle="modal" data-target="#newTicketModal">
+            <i class="fas fa-plus"></i> New Ticket
+        </button>
+    </div>
+
+    <!-- Support Tickets List -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">My Support Tickets</h6>
+        </div>
+        <div class="card-body">
+            {% if tickets %}
+            <div class="table-responsive">
+                <table class="table table-bordered" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Ticket #</th>
+                            <th>Subject</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Created</th>
+                            <th>Last Updated</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ticket in tickets %}
+                        <tr>
+                            <td>#{{ ticket.id }}</td>
+                            <td>{{ ticket.subject }}</td>
+                            <td>
+                                {% if ticket.status == 'Open' %}
+                                    <span class="badge badge-info">Open</span>
+                                {% elif ticket.status == 'In Progress' %}
+                                    <span class="badge badge-warning">In Progress</span>
+                                {% elif ticket.status == 'Resolved' %}
+                                    <span class="badge badge-success">Resolved</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">Closed</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if ticket.priority == 'Urgent' %}
+                                    <span class="badge badge-danger">Urgent</span>
+                                {% elif ticket.priority == 'High' %}
+                                    <span class="badge badge-warning">High</span>
+                                {% elif ticket.priority == 'Medium' %}
+                                    <span class="badge badge-info">Medium</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">Low</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ ticket.created_at|date:"M d, Y H:i" }}</td>
+                            <td>{{ ticket.updated_at|date:"M d, Y H:i" }}</td>
+                            <td>
+                                <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#ticketModal{{ ticket.id }}">
+                                    <i class="fas fa-eye"></i> View
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-inbox fa-3x text-gray-300 mb-3"></i>
+                <p class="text-gray-500">No support tickets yet. Create your first ticket to get help!</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- New Ticket Modal -->
+<div class="modal fade" id="newTicketModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Support Ticket</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form method="POST" action="{% url 'contact_support' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="subject">Subject:</label>
+                        <input type="text" class="form-control" id="subject" name="subject" required placeholder="Brief description of your issue">
+                    </div>
+                    <div class="form-group">
+                        <label for="priority">Priority:</label>
+                        <select class="form-control" id="priority" name="priority">
+                            <option value="Low">Low</option>
+                            <option value="Medium" selected>Medium</option>
+                            <option value="High">High</option>
+                            <option value="Urgent">Urgent</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="message">Message:</label>
+                        <textarea class="form-control" id="message" name="message" rows="6" required placeholder="Describe your issue or question in detail"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> Submit Ticket
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Ticket Detail Modals -->
+{% for ticket in tickets %}
+<div class="modal fade" id="ticketModal{{ ticket.id }}" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Ticket #{{ ticket.id }} - {{ ticket.subject }}</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <strong>Status:</strong> 
+                    {% if ticket.status == 'Open' %}
+                        <span class="badge badge-info">Open</span>
+                    {% elif ticket.status == 'In Progress' %}
+                        <span class="badge badge-warning">In Progress</span>
+                    {% elif ticket.status == 'Resolved' %}
+                        <span class="badge badge-success">Resolved</span>
+                    {% else %}
+                        <span class="badge badge-secondary">Closed</span>
+                    {% endif %}
+                    <br>
+                    <strong>Priority:</strong> 
+                    {% if ticket.priority == 'Urgent' %}
+                        <span class="badge badge-danger">Urgent</span>
+                    {% elif ticket.priority == 'High' %}
+                        <span class="badge badge-warning">High</span>
+                    {% elif ticket.priority == 'Medium' %}
+                        <span class="badge badge-info">Medium</span>
+                    {% else %}
+                        <span class="badge badge-secondary">Low</span>
+                    {% endif %}
+                    <br>
+                    <strong>Created:</strong> {{ ticket.created_at|date:"F d, Y H:i" }}<br>
+                    {% if ticket.resolved_at %}
+                    <strong>Resolved:</strong> {{ ticket.resolved_at|date:"F d, Y H:i" }}<br>
+                    {% endif %}
+                </div>
+                <hr>
+                <div class="mb-3">
+                    <strong>Your Message:</strong>
+                    <div class="border p-3 bg-light mt-2">
+                        {{ ticket.message|linebreaks }}
+                    </div>
+                </div>
+                {% if ticket.admin_response %}
+                <div class="mb-3">
+                    <strong>Admin Response:</strong>
+                    <div class="border p-3 bg-primary text-white mt-2">
+                        {{ ticket.admin_response|linebreaks }}
+                    </div>
+                    <small class="text-muted">Response received on {{ ticket.updated_at|date:"F d, Y H:i" }}</small>
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Your ticket is awaiting admin response. We'll get back to you soon!
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+

@@ -239,27 +239,82 @@ $(document).ready(function() {
         }
     });
 
-    // Handle form submission
-    $('#customerFormModal').on('submit', '#customer-form', function(event) {
+    // Handle form submission - use event delegation for dynamically loaded forms
+    $(document).on('submit', '#customer-form', function(event) {
         event.preventDefault();
+        event.stopPropagation();
+        
         var form = $(this);
         var modal = $('#customerFormModal');
+        var submitBtn = form.find('input[type="submit"]');
+        var originalBtnText = submitBtn.val();
+        
+        // Disable submit button and show loading state
+        submitBtn.prop('disabled', true).val('Saving...');
+        
+        // Get CSRF token
+        var csrftoken = form.find('[name=csrfmiddlewaretoken]').val();
+        
         $.ajax({
             url: form.attr('action'),
             type: form.attr('method'),
             data: form.serialize(),
+            headers: {
+                'X-CSRFToken': csrftoken
+            },
+            dataType: 'json',
             success: function(response) {
+                submitBtn.prop('disabled', false).val(originalBtnText);
+                
                 if (response.success) {
+                    // Show success message
+                    if (typeof sweetify !== 'undefined') {
+                        sweetify.success('Customer saved successfully!');
+                    }
                     modal.modal('hide');
-                    location.reload();
+                    // Reload page after a short delay
+                    setTimeout(function() {
+                        location.reload();
+                    }, 500);
                 } else {
-                    modal.find('.modal-body').html(response.form_html);
+                    // Form has errors, replace form HTML
+                    if (response.form_html) {
+                        modal.find('.modal-body').html(response.form_html);
+                        // Re-initialize map if form was reloaded
+                        setTimeout(function() {
+                            if (typeof initLocationMap === 'function') {
+                                initLocationMap();
+                            }
+                        }, 100);
+                    } else {
+                        alert('Error: ' + (response.message || 'Please check the form for errors.'));
+                    }
                 }
             },
-            error: function() {
-                alert('Error submitting form.');
+            error: function(xhr, status, error) {
+                submitBtn.prop('disabled', false).val(originalBtnText);
+                
+                console.error('Form submission error:', error);
+                console.error('Response:', xhr.responseText);
+                
+                // Try to parse error response
+                var errorMsg = 'Error submitting form. ';
+                try {
+                    var errorResponse = JSON.parse(xhr.responseText);
+                    if (errorResponse.message) {
+                        errorMsg += errorResponse.message;
+                    } else if (errorResponse.error) {
+                        errorMsg += errorResponse.error;
+                    }
+                } catch (e) {
+                    errorMsg += 'Please check your connection and try again.';
+                }
+                
+                alert(errorMsg);
             }
         });
+        
+        return false;
     });
 });
 </script>

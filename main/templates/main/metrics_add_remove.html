@@ -198,18 +198,34 @@
 <script>
 $(document).ready(function() {
     // Add new customer
-    $('#add-customer-btn').on('click', function() {
+    $('#add-customer-btn').on('click', function(e) {
+        e.preventDefault();
         var modal = $('#customerFormModal');
+        modal.find('.modal-body').html('<div class="text-center p-4"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Loading form...</p></div>');
+        modal.find('.modal-title').text('Add New Meter');
+        modal.modal('show');
+        
         $.ajax({
             url: '{% url "add_customer" %}',
             type: 'GET',
             success: function(data) {
                 modal.find('.modal-body').html(data);
-                modal.find('.modal-title').text('Add Customer');
-                modal.modal('show');
+                // Re-initialize map after form is loaded
+                setTimeout(function() {
+                    if (typeof initLocationMap === 'function') {
+                        initLocationMap();
+                    }
+                }, 300);
             },
-            error: function() {
-                alert('Error loading form.');
+            error: function(xhr, status, error) {
+                console.error('Error loading form:', error);
+                modal.find('.modal-body').html(
+                    '<div class="alert alert-danger">' +
+                    '<h5>Error Loading Form</h5>' +
+                    '<p>Could not load the form. Please try again.</p>' +
+                    '<p><small>Error: ' + error + '</small></p>' +
+                    '</div>'
+                );
             }
         });
     });
@@ -256,27 +272,150 @@ $(document).ready(function() {
         }
     });
 
-    // Handle form submission
-    $('#customerFormModal').on('submit', '#customer-form', function(event) {
+    // Handle form submission - use event delegation for dynamically loaded forms
+    $(document).on('submit', '#customer-form', function(event) {
         event.preventDefault();
+        event.stopPropagation();
+        
         var form = $(this);
         var modal = $('#customerFormModal');
+        var submitBtn = form.find('input[type="submit"]');
+        var originalBtnText = submitBtn.val();
+        
+        console.log('Form submission started');
+        console.log('Form action:', form.attr('action'));
+        console.log('Form method:', form.attr('method'));
+        console.log('Form data:', form.serialize());
+        
+        // Validate required fields before submission
+        var hasErrors = false;
+        form.find('[required]').each(function() {
+            if (!$(this).val()) {
+                hasErrors = true;
+                $(this).addClass('is-invalid');
+            } else {
+                $(this).removeClass('is-invalid');
+            }
+        });
+        
+        if (hasErrors) {
+            alert('Please fill in all required fields.');
+            return false;
+        }
+        
+        // Disable submit button and show loading state
+        submitBtn.prop('disabled', true).val('Saving...');
+        
+        // Get CSRF token
+        var csrftoken = form.find('[name=csrfmiddlewaretoken]').val();
+        if (!csrftoken) {
+            csrftoken = $('[name=csrfmiddlewaretoken]').val();
+        }
+        
+        console.log('CSRF token:', csrftoken ? 'Found' : 'Missing');
+        
         $.ajax({
             url: form.attr('action'),
             type: form.attr('method'),
             data: form.serialize(),
+            headers: {
+                'X-CSRFToken': csrftoken
+            },
+            dataType: 'json',
             success: function(response) {
+                console.log('Form submission success:', response);
+                submitBtn.prop('disabled', false).val(originalBtnText);
+                
                 if (response.success) {
+                    // Show success message
+                    if (typeof sweetify !== 'undefined') {
+                        sweetify.success('Customer saved successfully!');
+                    } else {
+                        alert('Customer saved successfully!');
+                    }
                     modal.modal('hide');
-                    location.reload();
+                    // Reload page after a short delay
+                    setTimeout(function() {
+                        location.reload();
+                    }, 500);
                 } else {
-                    modal.find('.modal-body').html(response.form_html);
+                    console.log('Form has errors:', response.message);
+                    // Form has errors, replace form HTML
+                    if (response.form_html) {
+                        modal.find('.modal-body').html(response.form_html);
+                        // Show error message
+                        if (response.message) {
+                            var errorAlert = '<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
+                                '<strong>Error:</strong> ' + response.message +
+                                '<button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>' +
+                                '</div>';
+                            modal.find('.modal-body').prepend(errorAlert);
+                        }
+                        // Re-initialize map if form was reloaded
+                        setTimeout(function() {
+                            if (typeof initLocationMap === 'function') {
+                                initLocationMap();
+                            }
+                        }, 100);
+                    } else {
+                        alert('Error: ' + (response.message || 'Please check the form for errors.'));
+                    }
                 }
             },
-            error: function() {
-                alert('Error submitting form.');
+            error: function(xhr, status, error) {
+                submitBtn.prop('disabled', false).val(originalBtnText);
+                
+                console.error('Form submission error:', error);
+                console.error('Status:', status);
+                console.error('Response:', xhr.responseText);
+                console.error('Response status:', xhr.status);
+                
+                // Try to parse error response
+                var errorMsg = 'Error submitting form. ';
+                try {
+                    // Check if response is HTML (form with errors)
+                    if (xhr.responseText && xhr.responseText.trim().startsWith('<!')) {
+                        // Server returned HTML instead of JSON - might be a form validation error
+                        modal.find('.modal-body').html(xhr.responseText);
+                        setTimeout(function() {
+                            if (typeof initLocationMap === 'function') {
+                                initLocationMap();
+                            }
+                        }, 100);
+                        return;
+                    }
+                    
+                    var errorResponse = JSON.parse(xhr.responseText);
+                    if (errorResponse.message) {
+                        errorMsg += errorResponse.message;
+                    } else if (errorResponse.error) {
+                        errorMsg += errorResponse.error;
+                    } else if (errorResponse.form_html) {
+                        // Form has validation errors
+                        modal.find('.modal-body').html(errorResponse.form_html);
+                        setTimeout(function() {
+                            if (typeof initLocationMap === 'function') {
+                                initLocationMap();
+                            }
+                        }, 100);
+                        return;
+                    }
+                } catch (e) {
+                    console.error('Error parsing response:', e);
+                    if (xhr.status === 403) {
+                        errorMsg += 'Access denied. Please refresh the page and try again.';
+                    } else if (xhr.status === 500) {
+                        errorMsg += 'Server error. Please try again later.';
+                    } else {
+                        errorMsg += 'Please check your connection and try again.';
+                    }
+                }
+                
+                alert(errorMsg);
             }
         });
+        
+        return false;
     });
 });
 </script>

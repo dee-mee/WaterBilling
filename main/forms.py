@@ -41,18 +41,23 @@ class ClientForm(forms.ModelForm):
 
 
 class CustomerForm(forms.ModelForm):
-    contact_number = forms.CharField(max_length=13, validators=[RegexValidator(r'^\+254\d{9}$', 'Enter a valid Kenyan phone number.')])
+    contact_number = forms.CharField(
+        max_length=13, 
+        required=False,
+        validators=[RegexValidator(r'^\+254\d{9}$', 'Enter a valid Kenyan phone number in format +254XXXXXXXXX.')],
+        help_text='Format: +254XXXXXXXXX (optional)'
+    )
 
     class Meta:
         model = Client
         fields = ['user', 'meter_number', 'contact_number', 'address', 'latitude', 'longitude', 'status']
         widgets = {
             'user': forms.Select(attrs={'class': 'form-control'}),
-            'meter_number': forms.TextInput(attrs={'type': 'number', 'class': 'form-control', 'placeholder':'0000000' }),
-            'address': forms.TextInput(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'House Number, Street, Area' }),
-            'latitude': forms.NumberInput(attrs={'type': 'number', 'step': '0.000001', 'class': 'form-control', 'placeholder':'-1.2921', 'id': 'id_latitude'}),
-            'longitude': forms.NumberInput(attrs={'type': 'number', 'step': '0.000001', 'class': 'form-control', 'placeholder':'36.8219', 'id': 'id_longitude'}),
-            'status': forms.Select(attrs={'class': 'form-control', 'placeholder':'Select' }),
+            'meter_number': forms.TextInput(attrs={'type': 'number', 'class': 'form-control', 'placeholder':'0000000', 'required': True}),
+            'address': forms.TextInput(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'House Number, Street, Area', 'required': True}),
+            'latitude': forms.NumberInput(attrs={'type': 'number', 'step': '0.000001', 'class': 'form-control', 'placeholder':'0.4', 'id': 'id_latitude'}),
+            'longitude': forms.NumberInput(attrs={'type': 'number', 'step': '0.000001', 'class': 'form-control', 'placeholder':'37.9', 'id': 'id_longitude'}),
+            'status': forms.Select(attrs={'class': 'form-control', 'placeholder':'Select', 'required': True}),
         }
 
 

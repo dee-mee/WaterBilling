@@ -111,13 +111,24 @@
             return;
         }
 
-        // Initialize map - Centered on Kenya, zoomed to show entire country
+        // Initialize map - Centered on Kenya, zoomed to show only Kenya
+        // Kenya bounds: North: 5.5°N, South: -4.7°S, East: 41.9°E, West: 33.9°E
         var map = L.map('map', {
             zoomControl: true,
             preferCanvas: false,
             fadeAnimation: true,
             zoomAnimation: true
-        }).setView([0.5, 37.9], 5);
+        });
+        
+        // Set view to Kenya with appropriate zoom level (6.5 shows Kenya nicely)
+        map.setView([0.4, 37.9], 6.5);
+        
+        // Set max bounds to keep map focused on Kenya/East Africa region
+        var kenyaBounds = L.latLngBounds(
+            [-5.0, 33.0],  // Southwest corner
+            [6.0, 42.5]    // Northeast corner
+        );
+        map.setMaxBounds(kenyaBounds);
 
         // Multiple tile layer options for better reliability
         // Primary: OpenStreetMap France (more reliable for production)

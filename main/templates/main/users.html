@@ -66,6 +66,8 @@
                             <td>
                                 {% if user.admin_approved %}
                                     <span class="badge badge-success">Approved</span>
+                                {% elif user.rejected %}
+                                    <span class="badge badge-danger">Rejected</span>
                                 {% else %}
                                     <span class="badge badge-warning">Pending</span>
                                 {% endif %}

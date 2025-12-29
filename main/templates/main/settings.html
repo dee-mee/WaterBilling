@@ -1,0 +1,211 @@
+{% extends 'main/layout.html' %}
+{% load static %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Settings</h1>
+    </div>
+
+    <div class="row">
+        <!-- Profile Settings Card -->
+        <div class="col-xl-8 col-lg-7">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Profile Settings</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{% url 'settings' %}">
+                        {% csrf_token %}
+                        <input type="hidden" name="update_profile" value="1">
+                        
+                        <div class="form-group row">
+                            <div class="col-sm-6 mb-3 mb-sm-0">
+                                <label>Email:</label>
+                                <input type="email" class="form-control" value="{{ user.email }}" disabled>
+                                <small class="form-text text-muted">Email cannot be changed</small>
+                            </div>
+                            <div class="col-sm-6">
+                                <label>Full Name:</label>
+                                <input type="text" class="form-control" value="{{ user.last_name }}, {{ user.first_name }}" disabled>
+                                <small class="form-text text-muted">Name cannot be changed here</small>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group row">
+                            <div class="col-sm-6 mb-3 mb-sm-0">
+                                <label>New Password:</label>
+                                {{ profile_form.password }}
+                                <small class="form-text text-muted">Leave blank if you don't want to change password</small>
+                            </div>
+                            <div class="col-sm-6">
+                                <label>Confirm Password:</label>
+                                <input type="password" name="password2" class="form-control form-control-user" placeholder="Confirm Password">
+                            </div>
+                        </div>
+                        
+                        <div class="help mb-3" id="id_password1_helptext">
+                            <ul style="font-size: 13px;">
+                                <li>Password can't be too similar to other personal information.</li>
+                                <li>Password must contain at least 8 characters.</li>
+                                <li>Password can't be a commonly used password.</li>
+                                <li>Password can't be entirely numeric.</li>
+                            </ul>
+                        </div>
+                        
+                        <hr>
+                        <div class="d-flex justify-content-end">
+                            <button type="submit" class="btn btn-primary">Update Profile</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Account Information Card -->
+        <div class="col-xl-4 col-lg-5">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Account Information</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Account Status:</strong><br>
+                        {% if user.is_active %}
+                            <span class="badge badge-success">Active</span>
+                        {% else %}
+                            <span class="badge badge-danger">Inactive</span>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Verification Status:</strong><br>
+                        {% if user.verified %}
+                            <span class="badge badge-success">Verified</span>
+                        {% else %}
+                            <span class="badge badge-warning">Not Verified</span>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Admin Approval:</strong><br>
+                        {% if user.admin_approved %}
+                            <span class="badge badge-success">Approved</span>
+                        {% elif user.rejected %}
+                            <span class="badge badge-danger">Rejected</span>
+                        {% else %}
+                            <span class="badge badge-warning">Pending</span>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <strong>Member Since:</strong><br>
+                        <small>{{ user.created_at|date:"F d, Y" }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Support Card -->
+    <div class="row">
+        <div class="col-xl-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Contact Support</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{% url 'contact_support' %}">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="subject">Subject:</label>
+                            <input type="text" class="form-control" id="subject" name="subject" required placeholder="Brief description of your issue">
+                        </div>
+                        <div class="form-group">
+                            <label for="priority">Priority:</label>
+                            <select class="form-control" id="priority" name="priority">
+                                <option value="Low">Low</option>
+                                <option value="Medium" selected>Medium</option>
+                                <option value="High">High</option>
+                                <option value="Urgent">Urgent</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="message">Message:</label>
+                            <textarea class="form-control" id="message" name="message" rows="5" required placeholder="Describe your issue or question in detail"></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-paper-plane"></i> Submit Ticket
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Support Tickets -->
+    {% if support_tickets %}
+    <div class="row">
+        <div class="col-xl-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">Recent Support Tickets</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-bordered" width="100%" cellspacing="0">
+                            <thead>
+                                <tr>
+                                    <th>Ticket #</th>
+                                    <th>Subject</th>
+                                    <th>Status</th>
+                                    <th>Priority</th>
+                                    <th>Created</th>
+                                    <th>Response</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ticket in support_tickets %}
+                                <tr>
+                                    <td>#{{ ticket.id }}</td>
+                                    <td>{{ ticket.subject }}</td>
+                                    <td>
+                                        {% if ticket.status == 'Open' %}
+                                            <span class="badge badge-info">Open</span>
+                                        {% elif ticket.status == 'In Progress' %}
+                                            <span class="badge badge-warning">In Progress</span>
+                                        {% elif ticket.status == 'Resolved' %}
+                                            <span class="badge badge-success">Resolved</span>
+                                        {% else %}
+                                            <span class="badge badge-secondary">Closed</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if ticket.priority == 'Urgent' %}
+                                            <span class="badge badge-danger">Urgent</span>
+                                        {% elif ticket.priority == 'High' %}
+                                            <span class="badge badge-warning">High</span>
+                                        {% elif ticket.priority == 'Medium' %}
+                                            <span class="badge badge-info">Medium</span>
+                                        {% else %}
+                                            <span class="badge badge-secondary">Low</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ ticket.created_at|date:"M d, Y H:i" }}</td>
+                                    <td>
+                                        {% if ticket.admin_response %}
+                                            <span class="badge badge-success">Yes</span>
+                                        {% else %}
+                                            <span class="badge badge-warning">Pending</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

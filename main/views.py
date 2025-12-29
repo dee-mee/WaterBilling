@@ -448,6 +448,7 @@ def approve_user(request, pk):
     user = Account.objects.get(id=pk)
     if request.method == 'POST':
         user.admin_approved = True
+        user.rejected = False
         user.is_active = True
         user.save()
         sweetify.success(request, f'User {user.email} has been approved successfully.')
@@ -460,6 +461,7 @@ def reject_user(request, pk):
     user = Account.objects.get(id=pk)
     if request.method == 'POST':
         user.admin_approved = False
+        user.rejected = True
         user.is_active = False
         user.save()
         sweetify.success(request, f'User {user.email} has been rejected.')
@@ -786,10 +788,24 @@ def add_customer(request):
     if request.method == 'POST':
         form = CustomerForm(request.POST)
         if form.is_valid():
-            form.save()
-            return JsonResponse({'success': True})
+            try:
+                client = form.save()
+                sweetify.success(request, f'Customer {client.first_name} {client.last_name} added successfully!')
+                return JsonResponse({'success': True, 'message': 'Customer added successfully!'})
+            except Exception as e:
+                print(f"Error saving customer: {str(e)}")
+                return JsonResponse({'success': False, 'message': f'Error saving customer: {str(e)}', 'form_html': render_to_string('main/customer_form_partial.html', {'form': form}, request=request)})
         else:
-            return JsonResponse({'success': False, 'form_html': render_to_string('main/customer_form_partial.html', {'form': form}, request=request)})
+            error_messages = []
+            for field, errors in form.errors.items():
+                for error in errors:
+                    error_messages.append(f"{field}: {error}")
+            print(f"Form validation errors: {error_messages}")
+            return JsonResponse({
+                'success': False, 
+                'message': 'Please correct the errors below: ' + '; '.join(error_messages),
+                'form_html': render_to_string('main/customer_form_partial.html', {'form': form}, request=request)
+            })
     else:
         form = CustomerForm()
     return render(request, 'main/customer_form_partial.html', {'form': form})
@@ -800,15 +816,28 @@ def edit_customer(request, pk):
     try:
         client = Client.objects.get(id=pk)
     except Client.DoesNotExist:
-        return HttpResponse("Client not found.", status=404)
+        return JsonResponse({'success': False, 'message': 'Client not found.'}, status=404)
 
     if request.method == 'POST':
         form = CustomerForm(request.POST, instance=client)
         if form.is_valid():
-            form.save()
-            return JsonResponse({'success': True})
+            try:
+                client = form.save()
+                sweetify.success(request, f'Customer {client.first_name} {client.last_name} updated successfully!')
+                return JsonResponse({'success': True, 'message': 'Customer updated successfully!'})
+            except Exception as e:
+                print(f"Error updating customer: {str(e)}")
+                return JsonResponse({'success': False, 'message': f'Error updating customer: {str(e)}', 'form_html': render_to_string('main/customer_form_partial.html', {'form': form, 'client': client}, request=request)})
         else:
-            return JsonResponse({'success': False, 'form_html': render_to_string('main/customer_form_partial.html', {'form': form, 'client': client}, request=request)})
+            error_messages = []
+            for field, errors in form.errors.items():
+                for error in errors:
+                    error_messages.append(f"{field}: {error}")
+            return JsonResponse({
+                'success': False, 
+                'message': 'Please correct the errors below.',
+                'form_html': render_to_string('main/customer_form_partial.html', {'form': form, 'client': client}, request=request)
+            })
     else: # GET request
         form = CustomerForm(instance=client)
 
@@ -1012,3 +1041,123 @@ def user_dashboard(request):
         'metrics': metrics,
     }
     return render(request, 'main/user_dashboard.html', context)
+
+
+@login_required(login_url='login')
+@verified_or_superuser
+def settings_view(request):
+    """Settings page for both admin and regular users"""
+    user = request.user
+    profile_form = UpdateProfileForm(instance=user)
+    support_tickets = SupportTicket.objects.filter(user=user).order_by('-created_at')[:10]
+    
+    if request.method == 'POST':
+        if 'update_profile' in request.POST:
+            profile_form = UpdateProfileForm(request.POST, instance=user)
+            password1 = request.POST.get('password', '')
+            password2 = request.POST.get('password2', '')
+            
+            if password1 and password1 != password2:
+                sweetify.error(request, 'Passwords do not match!')
+                return redirect('settings')
+            elif profile_form.is_valid():
+                profile_form.save()
+                sweetify.success(request, 'Profile updated successfully!')
+                return redirect('settings')
+            else:
+                sweetify.error(request, 'Invalid form data. Please check your inputs.')
+                return redirect('settings')
+    
+    context = {
+        'title': 'Settings',
+        'profile_form': profile_form,
+        'user': user,
+        'support_tickets': support_tickets,
+    }
+    return render(request, 'main/settings.html', context)
+
+
+@login_required(login_url='login')
+@verified_or_superuser
+def user_support(request):
+    """User view for their support tickets"""
+    user = request.user
+    tickets = SupportTicket.objects.filter(user=user).order_by('-created_at')
+    
+    context = {
+        'title': 'Support',
+        'tickets': tickets,
+    }
+    return render(request, 'main/user_support.html', context)
+
+
+@login_required(login_url='login')
+@verified_or_superuser
+def contact_support(request):
+    """Contact support - create a support ticket"""
+    if request.method == 'POST':
+        subject = request.POST.get('subject', '')
+        message = request.POST.get('message', '')
+        priority = request.POST.get('priority', 'Medium')
+        
+        if subject and message:
+            ticket = SupportTicket.objects.create(
+                user=request.user,
+                subject=subject,
+                message=message,
+                priority=priority
+            )
+            sweetify.success(request, f'Support ticket #{ticket.id} created successfully. We will get back to you soon.')
+            return redirect('user_support')
+        else:
+            sweetify.error(request, 'Please fill in both subject and message.')
+            return redirect('user_support')
+    
+    return redirect('user_support')
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def support_tickets(request):
+    """Admin view for managing support tickets"""
+    status_filter = request.GET.get('status', '')
+    priority_filter = request.GET.get('priority', '')
+    
+    tickets = SupportTicket.objects.all()
+    
+    if status_filter:
+        tickets = tickets.filter(status=status_filter)
+    if priority_filter:
+        tickets = tickets.filter(priority=priority_filter)
+    
+    tickets = tickets.order_by('-created_at')
+    
+    context = {
+        'title': 'Support Tickets',
+        'tickets': tickets,
+        'status_filter': status_filter,
+        'priority_filter': priority_filter,
+    }
+    return render(request, 'main/support_tickets.html', context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def update_ticket(request, pk):
+    """Admin view to update support ticket status and add response"""
+    ticket = SupportTicket.objects.get(id=pk)
+    
+    if request.method == 'POST':
+        status = request.POST.get('status', ticket.status)
+        admin_response = request.POST.get('admin_response', '')
+        
+        ticket.status = status
+        if admin_response:
+            ticket.admin_response = admin_response
+        if status in ['Resolved', 'Closed'] and not ticket.resolved_at:
+            from django.utils import timezone
+            ticket.resolved_at = timezone.now()
+        ticket.save()
+        
+        sweetify.success(request, f'Ticket #{ticket.id} updated successfully.')
+        return redirect('support_tickets')
+    
+    return redirect('support_tickets')

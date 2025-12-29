@@ -2,9 +2,11 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
       crossorigin=""/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder@1.13.0/dist/Control.Geocoder.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
         integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
         crossorigin=""></script>
+<script src="https://unpkg.com/leaflet-control-geocoder@1.13.0/dist/Control.Geocoder.js"></script>
 
 <form action="{% if client %}{% url 'edit_customer' client.id %}{% else %}{% url 'add_customer' %}{% endif %}" method="POST" class="user" id="customer-form">
     {% csrf_token %}
@@ -31,8 +33,18 @@
     </div>
     
     <div class="form-group">
-        <label>Location (Click on map to set coordinates):</label>
-        <div id="locationMap" style="height: 300px; width: 100%; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;"></div>
+        <label>Location (Search or click on map to set coordinates):</label>
+        <div class="mb-2">
+            <div class="input-group">
+                <input type="text" id="locationSearch" class="form-control" placeholder="Search for an address or location...">
+                <div class="input-group-append">
+                    <button class="btn btn-primary" type="button" id="searchLocationBtn">
+                        <i class="fas fa-search"></i> Search
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="locationMap" style="height: 400px; width: 100%; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 4px;"></div>
         <div class="row">
             <div class="col-md-6">
                 <label for="{{ form.latitude.id_for_label }}">Latitude:</label>
@@ -43,7 +55,9 @@
                 {{ form.longitude }}
             </div>
         </div>
-        <small class="form-text text-muted">Click on the map above to set the meter location, or enter coordinates manually.</small>
+        <small class="form-text text-muted">
+            <i class="fas fa-info-circle"></i> Use the search box to find a location, or click directly on the map to set coordinates. You can also drag the marker to adjust the position.
+        </small>
     </div>
     
     <div class="form-group">
@@ -58,24 +72,191 @@
 </form>
 
 <script>
-$(document).ready(function() {
-    // Initialize map for location picker - Default to Kenya (Nairobi)
-    var locationMap = L.map('locationMap').setView([-1.2921, 36.8219], 10);
+function initLocationMap() {
+    // Check if map container exists and Leaflet is loaded
+    if (typeof L === 'undefined') {
+        console.error('Leaflet not loaded');
+        setTimeout(initLocationMap, 100);
+        return;
+    }
     
-    // Add OpenStreetMap tiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-        maxZoom: 19
-    }).addTo(locationMap);
+    var mapEl = document.getElementById('locationMap');
+    if (!mapEl) {
+        console.error('Map container not found');
+        return;
+    }
+    
+    // Ensure map container is visible and has dimensions
+    var rect = mapEl.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) {
+        console.warn('Map container has no dimensions, retrying...');
+        setTimeout(initLocationMap, 100);
+        return;
+    }
+    
+    // Check if map is already initialized
+    if (mapEl._leaflet_id) {
+        return; // Map already initialized
+    }
     
     // Get initial coordinates from form fields
     var latField = $('#id_latitude');
     var lngField = $('#id_longitude');
-    var initialLat = parseFloat(latField.val()) || -1.2921;
-    var initialLng = parseFloat(lngField.val()) || 36.8219;
+    var initialLat = parseFloat(latField.val()) || 0.4; // Default to Kenya center
+    var initialLng = parseFloat(lngField.val()) || 37.9;
+    
+    // Initialize map - Centered on Kenya
+    var locationMap = L.map('locationMap', {
+        zoomControl: true,
+        preferCanvas: false,
+        fadeAnimation: true,
+        zoomAnimation: true
+    });
+    
+    // Set view to Kenya with appropriate zoom level
+    locationMap.setView([initialLat, initialLng], initialLat && initialLng && initialLat !== 0.4 ? 15 : 6.5);
+    
+    // Multiple tile layer options for better reliability
+    // Primary: OpenStreetMap France (more reliable for production)
+    var osmFr = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 20,
+        subdomains: 'abc',
+        crossOrigin: true
+    });
+
+    // Fallback 1: CartoDB (reliable CDN)
+    var carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        subdomains: 'abcd',
+        maxZoom: 20,
+        crossOrigin: true
+    });
+
+    // Fallback 2: OpenStreetMap standard (last resort)
+    var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+        maxZoom: 19,
+        crossOrigin: true
+    });
+
+    var currentLayer = null;
+    var currentLayerIndex = 0;
+    var tileLayers = [osmFr, carto, osm];
+    var layerNames = ['OSM France', 'CartoDB', 'OpenStreetMap'];
+    var tileErrorCounts = [0, 0, 0];
+    var maxTileErrors = 3;
+
+    // Function to switch to next fallback layer
+    function switchToNextLayer() {
+        if (currentLayerIndex >= tileLayers.length - 1) {
+            console.error('All tile layers failed, map may not display correctly');
+            return;
+        }
+        
+        var oldLayer = currentLayer;
+        currentLayerIndex++;
+        currentLayer = tileLayers[currentLayerIndex];
+        
+        console.warn('Switching to fallback tile layer: ' + layerNames[currentLayerIndex]);
+        try {
+            if (oldLayer) {
+                locationMap.removeLayer(oldLayer);
+            }
+        } catch (err) {
+            console.warn('Error removing layer:', err);
+        }
+        
+        currentLayer.addTo(locationMap);
+        tileErrorCounts[currentLayerIndex] = 0;
+    }
+
+    // Enhanced error handling for each layer
+    tileLayers.forEach(function(layer, index) {
+        layer.on('tileerror', function(e) {
+            if (currentLayerIndex === index) {
+                tileErrorCounts[index]++;
+                console.warn(layerNames[index] + ' tile error (' + tileErrorCounts[index] + ')', e);
+                if (tileErrorCounts[index] >= maxTileErrors) {
+                    switchToNextLayer();
+                }
+            }
+        });
+        
+        // Reset error count on successful tile load
+        layer.on('tileload', function() {
+            if (currentLayerIndex === index && tileErrorCounts[index] > 0) {
+                tileErrorCounts[index] = Math.max(0, tileErrorCounts[index] - 1);
+            }
+        });
+    });
+
+    // Track if any tiles have loaded successfully
+    var tilesLoadedSuccessfully = false;
+    var tileLoadTimeout = null;
+    
+    osmFr.on('tileload', function() {
+        tilesLoadedSuccessfully = true;
+        if (tileLoadTimeout) {
+            clearTimeout(tileLoadTimeout);
+            tileLoadTimeout = null;
+        }
+    });
+    
+    // Start with primary layer
+    currentLayer = osmFr;
+    osmFr.addTo(locationMap);
+    
+    // If tiles don't load within 5 seconds, try fallback
+    tileLoadTimeout = setTimeout(function() {
+        if (currentLayerIndex === 0 && !tilesLoadedSuccessfully) {
+            console.warn('Tiles not loading within timeout, switching to fallback');
+            switchToNextLayer();
+        }
+    }, 5000);
     
     // Create marker
-    var marker = L.marker([initialLat, initialLng], {draggable: true}).addTo(locationMap);
+    var marker = L.marker([initialLat, initialLng], {
+        draggable: true,
+        icon: L.divIcon({
+            className: 'custom-location-marker',
+            html: '<div style="background-color: #007bff; width: 30px; height: 30px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); border: 3px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>',
+            iconSize: [30, 30],
+            iconAnchor: [15, 30]
+        })
+    }).addTo(locationMap);
+    
+    // Add geocoder control (optional - we have custom search too)
+    try {
+        if (typeof L.Control !== 'undefined' && typeof L.Control.Geocoder !== 'undefined') {
+            var geocoder = L.Control.Geocoder.nominatim({
+                geocodingQueryParams: {
+                    countrycodes: 'ke', // Focus on Kenya
+                    limit: 5
+                }
+            });
+            
+            L.Control.geocoder({
+                geocoder: geocoder,
+                position: 'topright',
+                placeholder: 'Search location...',
+                errorMessage: 'Nothing found.',
+                defaultMarkGeocode: false
+            }).on('markgeocode', function(e) {
+                var latlng = e.geocode.center;
+                marker.setLatLng(latlng);
+                locationMap.setView(latlng, 15);
+                latField.val(latlng.lat.toFixed(6));
+                lngField.val(latlng.lng.toFixed(6));
+                
+                // Update search box
+                $('#locationSearch').val(e.geocode.name || e.geocode.html || '');
+            }).addTo(locationMap);
+        }
+    } catch (e) {
+        console.warn('Geocoder control could not be initialized:', e);
+        // Continue without geocoder control - custom search will work
+    }
     
     // Update form fields when marker is moved
     marker.on('dragend', function(e) {
@@ -97,15 +278,180 @@ $(document).ready(function() {
     latField.add(lngField).on('change', function() {
         var lat = parseFloat(latField.val());
         var lng = parseFloat(lngField.val());
-        if (!isNaN(lat) && !isNaN(lng)) {
+        if (!isNaN(lat) && !isNaN(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180) {
             marker.setLatLng([lat, lng]);
-            locationMap.setView([lat, lng], locationMap.getZoom());
+            locationMap.setView([lat, lng], Math.max(locationMap.getZoom(), 15));
         }
     });
     
-    // Set initial marker position if coordinates exist
-    if (latField.val() && lngField.val()) {
-        locationMap.setView([initialLat, initialLng], 15);
+    // Search functionality - use event delegation to work with AJAX-loaded content
+    function performSearch() {
+        var query = $('#locationSearch').val().trim();
+        if (!query) {
+            alert('Please enter a location to search for.');
+            return;
+        }
+        
+        // Disable button during search
+        var searchBtn = $('#searchLocationBtn');
+        var originalText = searchBtn.html();
+        searchBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Searching...');
+        
+        // Use Nominatim geocoding API with proper headers
+        $.ajax({
+            url: 'https://nominatim.openstreetmap.org/search',
+            method: 'GET',
+            data: {
+                q: query,
+                format: 'json',
+                limit: 5,
+                countrycodes: 'ke', // Focus on Kenya
+                addressdetails: 1
+            },
+            headers: {
+                'Accept-Language': 'en'
+            },
+            success: function(data) {
+                searchBtn.prop('disabled', false).html(originalText);
+                
+                if (data && data.length > 0) {
+                    // Use the first result (most relevant)
+                    var result = data[0];
+                    var lat = parseFloat(result.lat);
+                    var lng = parseFloat(result.lon);
+                    
+                    // Update marker and map
+                    marker.setLatLng([lat, lng]);
+                    locationMap.setView([lat, lng], 15);
+                    latField.val(lat.toFixed(6));
+                    lngField.val(lng.toFixed(6));
+                    
+                    // Update search box with full address
+                    var displayName = result.display_name || result.name || query;
+                    $('#locationSearch').val(displayName);
+                    
+                    // Show success message briefly
+                    var successMsg = $('<div class="alert alert-success alert-dismissible fade show mt-2" role="alert" style="font-size: 0.875rem;">' +
+                        '<i class="fas fa-check-circle"></i> Location found: ' + displayName +
+                        '<button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>' +
+                        '</div>');
+                    $('#locationSearch').after(successMsg);
+                    setTimeout(function() {
+                        successMsg.fadeOut(function() { $(this).remove(); });
+                    }, 3000);
+                } else {
+                    alert('Location not found. Please try a different search term or be more specific (e.g., "Nairobi, Kenya" or "Mombasa Road, Nairobi").');
+                }
+            },
+            error: function(xhr, status, error) {
+                searchBtn.prop('disabled', false).html(originalText);
+                console.error('Geocoding error:', error);
+                alert('Error searching for location. Please check your internet connection and try again.');
+            }
+        });
     }
+    
+    // Attach search button click handler using event delegation
+    $(document).off('click', '#searchLocationBtn').on('click', '#searchLocationBtn', function(e) {
+        e.preventDefault();
+        performSearch();
+    });
+    
+    // Allow Enter key to trigger search
+    $(document).off('keypress', '#locationSearch').on('keypress', '#locationSearch', function(e) {
+        if (e.which === 13) {
+            e.preventDefault();
+            performSearch();
+        }
+    });
+    
+    // Invalidate size after a short delay to ensure proper rendering
+    setTimeout(function() {
+        locationMap.invalidateSize();
+    }, 0);
+    setTimeout(function() {
+        locationMap.invalidateSize();
+    }, 250);
+    
+    // Make map available for debugging
+    window._locationMap = locationMap;
+}
+
+// Initialize when document is ready
+$(document).ready(function() {
+    // Initialize map immediately if container exists
+    if (document.getElementById('locationMap')) {
+        initLocationMap();
+    }
+    
+    // Also initialize when modal is shown (in case it's loaded via AJAX)
+    $(document).on('shown.bs.modal', '#customerFormModal', function() {
+        // Wait a bit for modal animation to complete
+        setTimeout(function() {
+            // Check if map exists and hasn't been initialized
+            var mapEl = document.getElementById('locationMap');
+            if (mapEl && !mapEl._leaflet_id) {
+                initLocationMap();
+            } else if (mapEl && mapEl._leaflet_id && window._locationMap) {
+                // Map already exists, just invalidate size
+                window._locationMap.invalidateSize();
+            }
+        }, 300);
+    });
 });
 </script>
+
+<style>
+.custom-location-marker {
+    background: transparent;
+    border: none;
+}
+
+#locationMap {
+    height: 400px !important;
+    width: 100% !important;
+    position: relative;
+    z-index: 0;
+}
+
+.leaflet-container {
+    height: 100%;
+    width: 100%;
+    background-color: #e5e3df;
+}
+
+.leaflet-container img {
+    max-width: none !important;
+    max-height: none !important;
+}
+
+.leaflet-tile {
+    max-width: none !important;
+    max-height: none !important;
+    visibility: visible !important;
+}
+
+.leaflet-tile,
+.leaflet-tile-loaded {
+    opacity: 1 !important;
+    visibility: visible !important;
+    display: block !important;
+}
+
+.leaflet-tile-container {
+    visibility: visible !important;
+}
+
+.leaflet-pane.leaflet-tile-pane {
+    z-index: 200 !important;
+}
+
+.leaflet-tile-pane {
+    opacity: 1 !important;
+}
+
+/* Fix for production environments where tiles might not load */
+.leaflet-container .leaflet-tile-pane img {
+    pointer-events: auto !important;
+}
+</style>
