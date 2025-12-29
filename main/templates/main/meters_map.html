@@ -238,5 +238,16 @@
         max-width: none !important;
         max-height: none !important;
     }
+
+    .leaflet-tile,
+    .leaflet-tile-loaded {
+        opacity: 1 !important;
+        visibility: visible !important;
+        display: block !important;
+    }
+
+    .leaflet-pane.leaflet-tile-pane {
+        z-index: 200 !important;
+    }
 </style>
 {% endblock %}
