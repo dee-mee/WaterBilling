@@ -111,13 +111,13 @@
             return;
         }
 
-        // Initialize map - Default to Nairobi, Kenya
+        // Initialize map - Centered on Kenya, zoomed to show entire country
         var map = L.map('map', {
             zoomControl: true,
             preferCanvas: false,
             fadeAnimation: true,
             zoomAnimation: true
-        }).setView([-1.2921, 36.8219], 6);
+        }).setView([0.5, 37.9], 5);
 
         // Multiple tile layer options for better reliability
         // Primary: OpenStreetMap France (more reliable for production)
@@ -248,7 +248,16 @@
 
         if (markers.length > 0) {
             var group = new L.featureGroup(markers);
-            map.fitBounds(group.getBounds().pad(0.1));
+            var bounds = group.getBounds();
+            var boundsSize = bounds.getNorthEast().distanceTo(bounds.getSouthWest());
+            
+            // Only fit bounds if markers are spread out (more than 50km apart)
+            // Otherwise, keep the initial view showing all of Kenya
+            if (boundsSize > 50000) { // 50km in meters
+                map.fitBounds(bounds.pad(0.1), {
+                    maxZoom: 7 // Don't zoom in more than level 7
+                });
+            }
         }
 
         // On some layouts (esp. when fonts/CSS load late), Leaflet needs a resize tick
