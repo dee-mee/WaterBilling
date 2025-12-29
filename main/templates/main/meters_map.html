@@ -93,40 +93,130 @@
 
     function initMetersMap() {
         var mapEl = document.getElementById('map');
-        if (!mapEl) return;
+        if (!mapEl) {
+            console.error('Map element not found');
+            return;
+        }
+        
         if (typeof L === 'undefined') {
             console.error('Leaflet (L) not loaded');
             return;
         }
 
-        // Initialize map - Default to Nairobi, Kenya
-        var map = L.map('map').setView([-1.2921, 36.8219], 6);
+        // Ensure map container is visible and has dimensions
+        var rect = mapEl.getBoundingClientRect();
+        if (rect.width === 0 || rect.height === 0) {
+            console.warn('Map container has no dimensions, retrying...');
+            setTimeout(initMetersMap, 100);
+            return;
+        }
 
-        // Primary tile layer
-        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        // Initialize map - Default to Nairobi, Kenya
+        var map = L.map('map', {
+            zoomControl: true,
+            preferCanvas: false,
+            fadeAnimation: true,
+            zoomAnimation: true
+        }).setView([-1.2921, 36.8219], 6);
+
+        // Multiple tile layer options for better reliability
+        // Primary: OpenStreetMap France (more reliable for production)
+        var osmFr = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-            maxZoom: 19,
+            maxZoom: 20,
+            subdomains: 'abc',
             crossOrigin: true
         });
 
-        // Fallback tile layer (in case OSM gets blocked/rate-limited)
-        var carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+        // Fallback 1: CartoDB (reliable CDN)
+        var carto = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
             subdomains: 'abcd',
             maxZoom: 20,
             crossOrigin: true
         });
 
-        osm.on('tileerror', function(e) {
-            console.warn('OSM tile error, switching to fallback tiles', e);
-            try {
-                map.removeLayer(osm);
-            } catch (err) {
-            }
-            carto.addTo(map);
+        // Fallback 2: OpenStreetMap standard (last resort)
+        var osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19,
+            crossOrigin: true
         });
 
-        osm.addTo(map);
+        var currentLayer = null;
+        var currentLayerIndex = 0;
+        var tileLayers = [osmFr, carto, osm];
+        var layerNames = ['OSM France', 'CartoDB', 'OpenStreetMap'];
+        var tileErrorCounts = [0, 0, 0];
+        var maxTileErrors = 3;
+
+        // Function to switch to next fallback layer
+        function switchToNextLayer() {
+            if (currentLayerIndex >= tileLayers.length - 1) {
+                console.error('All tile layers failed, map may not display correctly');
+                return;
+            }
+            
+            var oldLayer = currentLayer;
+            currentLayerIndex++;
+            currentLayer = tileLayers[currentLayerIndex];
+            
+            console.warn('Switching to fallback tile layer: ' + layerNames[currentLayerIndex]);
+            try {
+                if (oldLayer) {
+                    map.removeLayer(oldLayer);
+                }
+            } catch (err) {
+                console.warn('Error removing layer:', err);
+            }
+            
+            currentLayer.addTo(map);
+            tileErrorCounts[currentLayerIndex] = 0;
+        }
+
+        // Enhanced error handling for each layer
+        tileLayers.forEach(function(layer, index) {
+            layer.on('tileerror', function(e) {
+                if (currentLayerIndex === index) {
+                    tileErrorCounts[index]++;
+                    console.warn(layerNames[index] + ' tile error (' + tileErrorCounts[index] + ')', e);
+                    if (tileErrorCounts[index] >= maxTileErrors) {
+                        switchToNextLayer();
+                    }
+                }
+            });
+            
+            // Reset error count on successful tile load
+            layer.on('tileload', function() {
+                if (currentLayerIndex === index && tileErrorCounts[index] > 0) {
+                    tileErrorCounts[index] = Math.max(0, tileErrorCounts[index] - 1);
+                }
+            });
+        });
+
+        // Track if any tiles have loaded successfully
+        var tilesLoadedSuccessfully = false;
+        var tileLoadTimeout = null;
+        
+        osmFr.on('tileload', function() {
+            tilesLoadedSuccessfully = true;
+            if (tileLoadTimeout) {
+                clearTimeout(tileLoadTimeout);
+                tileLoadTimeout = null;
+            }
+        });
+        
+        // Start with primary layer
+        currentLayer = osmFr;
+        osmFr.addTo(map);
+        
+        // If tiles don't load within 5 seconds, try fallback
+        tileLoadTimeout = setTimeout(function() {
+            if (currentLayerIndex === 0 && !tilesLoadedSuccessfully) {
+                console.warn('Tiles not loading within timeout, switching to fallback');
+                switchToNextLayer();
+            }
+        }, 5000);
 
         // Add markers to map
         var markers = [];
@@ -230,13 +320,28 @@
         border: none;
     }
 
+    #map {
+        height: 600px !important;
+        width: 100% !important;
+        position: relative;
+        z-index: 0;
+    }
+
+    .leaflet-container {
+        height: 100%;
+        width: 100%;
+        background-color: #e5e3df;
+    }
+
     .leaflet-container img {
         max-width: none !important;
+        max-height: none !important;
     }
 
     .leaflet-tile {
         max-width: none !important;
         max-height: none !important;
+        visibility: visible !important;
     }
 
     .leaflet-tile,
@@ -246,8 +351,21 @@
         display: block !important;
     }
 
+    .leaflet-tile-container {
+        visibility: visible !important;
+    }
+
     .leaflet-pane.leaflet-tile-pane {
         z-index: 200 !important;
+    }
+
+    .leaflet-tile-pane {
+        opacity: 1 !important;
+    }
+
+    /* Fix for production environments where tiles might not load */
+    .leaflet-container .leaflet-tile-pane img {
+        pointer-events: auto !important;
     }
 </style>
 {% endblock %}
