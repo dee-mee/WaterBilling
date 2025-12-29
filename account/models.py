@@ -39,6 +39,7 @@ class Account(AbstractUser):
     verified = models.BooleanField(default=False)
     admin_approved = models.BooleanField(default=False, help_text="Designates whether this user has been approved by an admin.")
     rejected = models.BooleanField(default=False, help_text="Designates whether this user has been rejected by an admin.")
+    rejection_reason = models.TextField(blank=True, null=True, help_text="Reason for rejection if user was rejected.")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     USERNAME_FIELD = "email"

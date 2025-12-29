@@ -460,11 +460,71 @@ def approve_user(request, pk):
 def reject_user(request, pk):
     user = Account.objects.get(id=pk)
     if request.method == 'POST':
+        rejection_reason = request.POST.get('rejection_reason', '').strip()
+        
+        if not rejection_reason:
+            sweetify.error(request, 'Please provide a reason for rejection.')
+            return redirect('users_pending')
+        
         user.admin_approved = False
         user.rejected = True
         user.is_active = False
+        user.rejection_reason = rejection_reason
         user.save()
-        sweetify.success(request, f'User {user.email} has been rejected.')
+        
+        # Create in-app notification
+        UserNotification.objects.create(
+            user=user,
+            notification_type='rejection',
+            title='Account Rejection Notice',
+            message=f'Your account registration has been rejected. Reason: {rejection_reason}'
+        )
+        
+        # Send email notification
+        try:
+            import smtplib
+            from email.mime.text import MIMEText
+            from email.mime.multipart import MIMEMultipart
+            
+            SENDER_EMAIL = settings.OTP_EMAIL
+            SENDER_PASSWORD = settings.OTP_PASSWORD
+            
+            if SENDER_EMAIL and SENDER_PASSWORD:
+                msg = MIMEMultipart()
+                msg['From'] = SENDER_EMAIL
+                msg['To'] = user.email
+                msg['Subject'] = 'Account Registration Rejection - Water Billing System'
+                
+                body = f"""
+Dear {user.first_name} {user.last_name},
+
+We regret to inform you that your account registration for the Water Billing System has been rejected.
+
+Reason for Rejection:
+{rejection_reason}
+
+If you believe this is an error or would like to appeal this decision, please contact our support team.
+
+Thank you for your understanding.
+
+Best regards,
+Water Billing System Administration
+"""
+                msg.attach(MIMEText(body, 'plain'))
+                
+                server = smtplib.SMTP('smtp.gmail.com', 587)
+                server.starttls()
+                server.login(SENDER_EMAIL, SENDER_PASSWORD)
+                server.sendmail(SENDER_EMAIL, user.email, msg.as_string())
+                server.quit()
+                
+                sweetify.success(request, f'User {user.email} has been rejected and notified via email.')
+            else:
+                sweetify.success(request, f'User {user.email} has been rejected. (Email notification not configured)')
+        except Exception as e:
+            print(f"Error sending rejection email: {str(e)}")
+            sweetify.success(request, f'User {user.email} has been rejected. (Email notification failed: {str(e)})')
+        
         return redirect('users_pending')
     return redirect('users_pending')
 
@@ -1041,6 +1101,41 @@ def user_dashboard(request):
         'metrics': metrics,
     }
     return render(request, 'main/user_dashboard.html', context)
+
+
+@login_required(login_url='login')
+@verified_or_superuser
+def notifications_view(request):
+    """User notifications page"""
+    user = request.user
+    notifications = UserNotification.objects.filter(user=user).order_by('-created_at')
+    unread_count = notifications.filter(is_read=False).count()
+    
+    # Mark all as read if requested
+    if request.GET.get('mark_all_read') == 'true':
+        from django.utils import timezone
+        notifications.filter(is_read=False).update(is_read=True, read_at=timezone.now())
+        sweetify.success(request, 'All notifications marked as read.')
+        return redirect('notifications')
+    
+    context = {
+        'title': 'Notifications',
+        'notifications': notifications,
+        'unread_count': unread_count,
+    }
+    return render(request, 'main/notifications.html', context)
+
+
+@login_required(login_url='login')
+@verified_or_superuser
+def mark_notification_read(request, pk):
+    """Mark a notification as read"""
+    try:
+        notification = UserNotification.objects.get(id=pk, user=request.user)
+        notification.mark_as_read()
+        return JsonResponse({'success': True})
+    except UserNotification.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Notification not found'}, status=404)
 
 
 @login_required(login_url='login')

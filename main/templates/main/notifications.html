@@ -1,0 +1,98 @@
+{% extends 'main/layout.html' %}
+{% load static %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Notifications</h1>
+        {% if unread_count > 0 %}
+        <a href="{% url 'notifications' %}?mark_all_read=true" class="btn btn-primary">
+            <i class="fas fa-check-double"></i> Mark All as Read
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Notifications List -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">
+                My Notifications
+                {% if unread_count > 0 %}
+                <span class="badge badge-danger ml-2">{{ unread_count }} Unread</span>
+                {% endif %}
+            </h6>
+        </div>
+        <div class="card-body">
+            {% if notifications %}
+            <div class="list-group">
+                {% for notification in notifications %}
+                <div class="list-group-item {% if not notification.is_read %}list-group-item-action bg-light border-left-primary{% endif %}" 
+                     {% if not notification.is_read %}onclick="markAsRead({{ notification.id }})" style="cursor: pointer;"{% endif %}>
+                    <div class="d-flex w-100 justify-content-between">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">
+                                {% if not notification.is_read %}
+                                <span class="badge badge-primary mr-2">New</span>
+                                {% endif %}
+                                {% if notification.notification_type == 'rejection' %}
+                                    <i class="fas fa-times-circle text-danger"></i>
+                                {% elif notification.notification_type == 'approval' %}
+                                    <i class="fas fa-check-circle text-success"></i>
+                                {% elif notification.notification_type == 'bill' %}
+                                    <i class="fas fa-file-invoice text-info"></i>
+                                {% else %}
+                                    <i class="fas fa-bell text-warning"></i>
+                                {% endif %}
+                                {{ notification.title }}
+                            </h6>
+                            <p class="mb-1">{{ notification.message|linebreaks }}</p>
+                            <small class="text-muted">
+                                <i class="far fa-clock"></i> {{ notification.created_at|date:"F d, Y H:i" }}
+                                {% if notification.is_read and notification.read_at %}
+                                | <i class="far fa-check-circle"></i> Read on {{ notification.read_at|date:"F d, Y H:i" }}
+                                {% endif %}
+                            </small>
+                        </div>
+                        {% if not notification.is_read %}
+                        <button type="button" class="btn btn-sm btn-outline-primary ml-2" onclick="event.stopPropagation(); markAsRead({{ notification.id }});">
+                            <i class="fas fa-check"></i> Mark as Read
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-bell-slash fa-3x text-gray-300 mb-3"></i>
+                <p class="text-gray-500">No notifications yet.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function markAsRead(notificationId) {
+    $.ajax({
+        url: '{% url "mark_notification_read" 0 %}'.replace('0', notificationId),
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        success: function(response) {
+            if (response.success) {
+                // Reload page to update notification status
+                location.reload();
+            }
+        },
+        error: function() {
+            alert('Error marking notification as read.');
+        }
+    });
+}
+</script>
+{% endblock %}
+
