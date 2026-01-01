@@ -2,6 +2,7 @@ from django.db import models
 from account.models import *
 import datetime
 import string, secrets
+from django.utils import timezone
 
 
 class Client(models.Model):
@@ -61,7 +62,8 @@ class WaterBill(models.Model):
             return self.meter_consumption * 1.0 if self.meter_consumption else 0
 
     def penalty(self):
-        if self.penaltydate and self.penaltydate == datetime.date.today():
+        today = timezone.localdate()
+        if self.penaltydate and today >= self.penaltydate:
             try:
                 metric = Metric.objects.first()
                 if not metric:
@@ -79,10 +81,10 @@ class WaterBill(models.Model):
 
     
     def payable(self):
-        if self.penaltydate == datetime.date.today():
+        today = timezone.localdate()
+        if self.penaltydate and today >= self.penaltydate:
             return self.compute_bill() + self.penalty()
-        else:
-            return self.compute_bill()
+        return self.compute_bill()
 
 
     def __str__(self):
