@@ -128,11 +128,11 @@
                             <tr>
                                 <td> {{bill.name}} </td>
                                 <td> {{bill.meter_consumption}} cu.m</td> 
-                                <td> ₱{{bill.compute_bill}}</td> 
+                                <td> KSh {{bill.compute_bill}}</td> 
                                 <td> {{bill.duedate}} </td> 
                                 <td> {{bill.penaltydate}} </td> 
-                                <td> {% if bill.penalty %} ₱{{bill.penalty}} {% else %} No Penalty {% endif %}</td> 
-                                <td> ₱{{bill.payable}} </td> 
+                                <td> {% if bill.penalty %} KSh {{bill.penalty}} {% else %} No Penalty {% endif %}</td> 
+                                <td> KSh {{bill.payable}} </td> 
                                 <td> {{bill.payment_status}} </td>
                             </tr>   
                             {% endfor %}

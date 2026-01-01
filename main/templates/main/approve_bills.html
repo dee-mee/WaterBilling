@@ -24,7 +24,7 @@
                         <tr>
                             <td> {{bill.name}} </td>
                             <td> {{bill.meter_consumption}} cu.m</td> 
-                            <td> ₱{{bill.compute_bill}}</td> 
+                            <td> KSh {{bill.compute_bill}}</td> 
                             <td> {{bill.duedate}} </td> 
                             <td class="text-center">  
                                 <a href="{% url 'bill_approve' bill.id %}" class="btn btn-success">Approve</a>

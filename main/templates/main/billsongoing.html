@@ -39,11 +39,11 @@
                         <tr>
                             <td> {{bill.name}} </td>
                             <td> {{bill.meter_consumption}} cu.m</td> 
-                            <td> ₱{{bill.compute_bill}}</td> 
+                            <td> KSh {{bill.compute_bill}}</td> 
                             <td> {{bill.duedate}} </td> 
                             <td> {{bill.penaltydate}} </td> 
                             <td> {{bill.penalty}}</td> 
-                            <td class="font-weight-bolder text-primary"> ₱{{bill.payable}} </td> 
+                            <td class="font-weight-bolder text-primary"> KSh {{bill.payable}} </td> 
                             <td> {{bill.payment_status}}</td>
                             <td class="text-center">
                                 <a href="{% url 'download_invoice' bill.id %}" class="btn btn-secondary btn-sm mx-1"><i class="fa-solid fa-download"></i></a>
