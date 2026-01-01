@@ -81,7 +81,7 @@ def download_invoice(request, pk):
         width, height = letter
 
         # Add logo if it exists
-        logo_path = os.path.join(settings.BASE_DIR, 'main/static/sb_admin/img/logo.png')
+        logo_path = os.path.join(settings.BASE_DIR, 'main/static/sb_admin/img/logo.jpg')
         if os.path.exists(logo_path):
             try:
                 p.drawImage(logo_path, inch, height - 1.5 * inch, width=1*inch, height=1*inch)
@@ -93,44 +93,71 @@ def download_invoice(request, pk):
         p.setFont("Helvetica-Bold", 16)
         p.drawString(2 * inch, height - inch, "Water Billing System")
 
-        # Customer Information
-        p.setFont("Helvetica", 12)
+        # ---------- Customer Information (Table) ----------
+        p.setFont("Helvetica-Bold", 13)
         y_position = height - 2 * inch
-        p.drawString(inch, y_position, f"Invoice for: {bill.name.first_name} {bill.name.last_name}")
-        y_position -= 0.25 * inch
-        p.drawString(inch, y_position, f"Meter Number: {bill.name.meter_number}")
-        y_position -= 0.25 * inch
-        p.drawString(inch, y_position, f"Address: {bill.name.address}")
+        p.drawString(inch, y_position, "Customer Information")
 
-        # Bill Details Header
-        y_position -= 0.5 * inch
-        p.setFont("Helvetica-Bold", 14)
+        # Table layout
+        p.setFont("Helvetica", 11)
+        y_position -= 0.3 * inch
+        row_height = 0.3 * inch
+        label_col_width = 2.5 * inch
+        value_col_width = 3.5 * inch
+        table_left_x = inch
+
+        customer_rows = [
+            ("Customer Name", f"{bill.name.first_name} {bill.name.last_name}"),
+            ("Meter Number", bill.name.meter_number or "N/A"),
+            ("Address", bill.name.address or "N/A"),
+        ]
+
+        for idx, (label, value) in enumerate(customer_rows):
+            row_y_top = y_position - idx * row_height
+            row_y_bottom = row_y_top - row_height
+
+            # Draw cells
+            p.rect(table_left_x, row_y_bottom, label_col_width, row_height, stroke=1, fill=0)
+            p.rect(table_left_x + label_col_width, row_y_bottom, value_col_width, row_height, stroke=1, fill=0)
+
+            # Draw text
+            p.drawString(table_left_x + 0.1 * inch, row_y_bottom + 0.1 * inch, str(label))
+            p.drawString(table_left_x + label_col_width + 0.1 * inch, row_y_bottom + 0.1 * inch, str(value))
+
+        # Move position below customer table
+        y_position = y_position - len(customer_rows) * row_height - 0.5 * inch
+
+        # ---------- Bill Details (Table) ----------
+        p.setFont("Helvetica-Bold", 13)
         p.drawString(inch, y_position, "Bill Details")
 
-        # Bill Details
-        p.setFont("Helvetica", 12)
-        y_position -= 0.25 * inch
-        if bill.billing_date:
-            p.drawString(inch, y_position, f"Billing Period: {bill.billing_date.strftime('%B %Y')}")
-        else:
-            p.drawString(inch, y_position, "Billing Period: N/A")
-        
-        y_position -= 0.25 * inch
-        if bill.duedate:
-            p.drawString(inch, y_position, f"Due Date: {bill.duedate.strftime('%Y-%m-%d')}")
-        else:
-            p.drawString(inch, y_position, "Due Date: N/A")
-        
-        y_position -= 0.25 * inch
-        p.drawString(inch, y_position, f"Previous Reading: {bill.previous_reading or 'N/A'}")
-        y_position -= 0.25 * inch
-        p.drawString(inch, y_position, f"Present Reading: {bill.present_reading or 'N/A'}")
-        y_position -= 0.25 * inch
-        p.drawString(inch, y_position, f"Water Consumption: {bill.meter_consumption or 'N/A'}")
-        y_position -= 0.25 * inch
-        p.drawString(inch, y_position, f"Total Bill: {bill.payable() if hasattr(bill, 'payable') else 'N/A'}")
-        y_position -= 0.25 * inch
-        p.drawString(inch, y_position, f"Status: {bill.payment_status or 'N/A'}")
+        p.setFont("Helvetica", 11)
+        y_position -= 0.3 * inch
+
+        billing_period = bill.billing_date.strftime('%B %Y') if bill.billing_date else "N/A"
+        due_date = bill.duedate.strftime('%Y-%m-%d') if bill.duedate else "N/A"
+
+        bill_rows = [
+            ("Billing Period", billing_period),
+            ("Due Date", due_date),
+            ("Previous Reading", bill.previous_reading or "N/A"),
+            ("Present Reading", bill.present_reading or "N/A"),
+            ("Water Consumption (m³)", bill.meter_consumption or "N/A"),
+            ("Total Bill", bill.payable() if hasattr(bill, "payable") else "N/A"),
+            ("Payment Status", bill.payment_status or "N/A"),
+        ]
+
+        for idx, (label, value) in enumerate(bill_rows):
+            row_y_top = y_position - idx * row_height
+            row_y_bottom = row_y_top - row_height
+
+            # Draw cells
+            p.rect(table_left_x, row_y_bottom, label_col_width, row_height, stroke=1, fill=0)
+            p.rect(table_left_x + label_col_width, row_y_bottom, value_col_width, row_height, stroke=1, fill=0)
+
+            # Draw text
+            p.drawString(table_left_x + 0.1 * inch, row_y_bottom + 0.1 * inch, str(label))
+            p.drawString(table_left_x + label_col_width + 0.1 * inch, row_y_bottom + 0.1 * inch, str(value))
 
         # Add a footer
         p.setFont("Helvetica", 8)
@@ -189,7 +216,7 @@ def ongoing_bills(request):
                 Auth_Token = os.environ.get('TWILIO_AUTH_TOKEN')
                 if SID and Auth_Token:
                     sender = '+17262005435'
-                    message = f'\n Your Total Bill is: {totalbill} pesos \n\n Your due date is: {duedate} \n\n Your penalty date is: {penaltydate}'
+                    message = f'\n Your Total Bill is: {totalbill} KSH \n\n Your due date is: {duedate} \n\n Your penalty date is: {penaltydate}'
                     cl = TwilClient(SID, Auth_Token)
                     cl.messages.create(body=message, from_=sender, to=receiver)
                     sweetify.toast(request, 'Notification Sent')
@@ -950,7 +977,7 @@ def send_reminders_view(request):
                 if SID and Auth_Token:
                     sender = '+17262005435'
                     receiver = bill.client.contact_number
-                    message = f'\n Your Total Bill is: {bill.total_bill} pesos \n\n Your due date is: {bill.due_date} \n\n Your penalty date is: {bill.penalty_date}'
+                    message = f'\n Your Total Bill is: {bill.total_bill} KSH \n\n Your due date is: {bill.due_date} \n\n Your penalty date is: {bill.penalty_date}'
                     cl = TwilClient(SID, Auth_Token)
                     cl.messages.create(body=message, from_=sender, to=receiver)
                     sweetify.toast(request, f'Reminder sent to {bill.client.first_name} {bill.client.last_name}')
@@ -1035,7 +1062,7 @@ def create_checkout_session(request, pk):
         payment_method_types=['card'],
         line_items=[{
             'price_data': {
-                'currency': 'php',
+                'currency': 'kes',
                 'product_data': {
                     'name': f'Water Bill for {bill.name.first_name} {bill.name.last_name}',
                 },
