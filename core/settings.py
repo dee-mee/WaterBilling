@@ -119,6 +119,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 STATICFILES_DIRS = [
     "main/static",
+    os.path.join(BASE_DIR, 'images'),
 ]
 
 CREATE_SUPERUSER = os.environ.get("CREATE_SUPERUSER") == "1"

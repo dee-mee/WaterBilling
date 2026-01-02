@@ -11,7 +11,7 @@
   <meta content="" name="keywords">
 
   <!-- icon -->
-  <link href="{% static 'sb_admin/img/logo.jpg' %}" rel="icon" type="image/jpeg">
+  <link href="{% static 'logo.png' %}" rel="icon" type="image/png">
  
 
   <!-- Google Fonts -->
@@ -29,11 +29,50 @@
 </head>
 
 <body>
+
+  <style>
+    #page-loader {
+      position: fixed;
+      inset: 0;
+      z-index: 99999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.98);
+    }
+
+    #page-loader img {
+      width: 140px;
+      height: auto;
+      animation: page-loader-pulse 900ms ease-in-out infinite;
+    }
+
+    @keyframes page-loader-pulse {
+      0%, 100% {
+        transform: scale(0.98);
+        opacity: 0.85;
+      }
+      50% {
+        transform: scale(1.03);
+        opacity: 1;
+      }
+    }
+
+    #page-loader.page-loader--hide {
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 200ms ease, visibility 200ms ease;
+    }
+  </style>
+
+  <div id="page-loader" aria-label="Loading" role="status">
+    <img src="{% static 'logo.png' %}" alt="Loading" />
+  </div>
   
   <!-- ======= Header ======= -->
   <header id="header" class="fixed-top header-transparent">
     <div class="container d-flex align-items-center">
-      <img src="{% static 'sb_admin/img/logo.jpg' %}" width="45px" height="40px" style="margin-right: 2px; padding-right: 4px;" />
+      <img src="{% static 'logo.png' %}" width="45px" height="50px" style="margin-right: 2px; padding-right: 4px;" />
       <h1 style="font-size: 20px; font-weight: bolder;" class="logo mr-auto bold"><a href="">Water Billing</a></h1>
 
       <nav class="main-nav d-none d-lg-block">
@@ -128,6 +167,26 @@
 
   <!-- Template Main JS File -->
   <script src="{% static 'landingpage/assets/js/main.js' %}"></script>
+
+  <script>
+    (function() {
+      function hideLoader() {
+        var el = document.getElementById('page-loader');
+        if (!el) return;
+        el.classList.add('page-loader--hide');
+        window.setTimeout(function() {
+          if (el && el.parentNode) el.parentNode.removeChild(el);
+        }, 250);
+      }
+
+      if (document.readyState === 'complete') {
+        hideLoader();
+      } else {
+        window.addEventListener('load', hideLoader);
+        window.setTimeout(hideLoader, 8000);
+      }
+    })();
+  </script>
 
 </body>
 
