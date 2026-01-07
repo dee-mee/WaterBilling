@@ -47,6 +47,25 @@
         #accordionSidebar.sidebar .sidebar-brand-text {
             font-weight: 700;
         }
+
+        /* Fix icon colors in sidebar - make them white/light for visibility */
+        #accordionSidebar.sidebar .nav-item .nav-link i,
+        #accordionSidebar.sidebar .nav-item .nav-link .fa,
+        #accordionSidebar.sidebar .nav-item .nav-link .fas,
+        #accordionSidebar.sidebar .nav-item .nav-link .fa-solid {
+            color: rgba(255, 255, 255, 0.8) !important;
+        }
+
+        #accordionSidebar.sidebar .nav-item .nav-link:hover i,
+        #accordionSidebar.sidebar .nav-item .nav-link:hover .fa,
+        #accordionSidebar.sidebar .nav-item .nav-link:hover .fas,
+        #accordionSidebar.sidebar .nav-item .nav-link:hover .fa-solid,
+        #accordionSidebar.sidebar .nav-item.active .nav-link i,
+        #accordionSidebar.sidebar .nav-item.active .nav-link .fa,
+        #accordionSidebar.sidebar .nav-item.active .nav-link .fas,
+        #accordionSidebar.sidebar .nav-item.active .nav-link .fa-solid {
+            color: rgba(255, 255, 255, 1) !important;
+        }
     </style>
 
     <!-- Datatables -->
