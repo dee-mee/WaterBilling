@@ -20,7 +20,14 @@
                                     <input type="email" name="email" class="form-control form-control-user" id="email" placeholder="Email">
                                     </div>
                                     <div class="form-group">
-                                    <input type="password" name="password" class="form-control form-control-user" id="password" placeholder="Password">
+                                    <div class="input-group">
+                                        <input type="password" name="password" class="form-control form-control-user" id="password" placeholder="Password">
+                                        <div class="input-group-append">
+                                            <button class="btn btn-outline-secondary js-password-toggle" type="button" aria-label="Show password">
+                                                <i class="fa-solid fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
                                     </div>
                                     <input type="submit" value="Login" class="btn btn-primary btn-user btn-block">
                                 </form>

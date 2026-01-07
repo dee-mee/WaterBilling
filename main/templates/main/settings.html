@@ -35,12 +35,26 @@
                         <div class="form-group row">
                             <div class="col-sm-6 mb-3 mb-sm-0">
                                 <label>New Password:</label>
-                                {{ profile_form.password }}
+                                <div class="input-group">
+                                    {{ profile_form.password }}
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-secondary js-password-toggle" type="button" aria-label="Show password">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
                                 <small class="form-text text-muted">Leave blank if you don't want to change password</small>
                             </div>
                             <div class="col-sm-6">
                                 <label>Confirm Password:</label>
-                                <input type="password" name="password2" class="form-control form-control-user" placeholder="Confirm Password">
+                                <div class="input-group">
+                                    <input type="password" name="password2" class="form-control form-control-user" placeholder="Confirm Password">
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-secondary js-password-toggle" type="button" aria-label="Show password">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
