@@ -29,15 +29,17 @@
     }
 
     .bg-login-image {
-        background-image: url("{% static 'landingpage/assets/img/water.png' %}") !important;
+        background-image: url("{% static 'logo.png' %}") !important;
         background-position: center;
-        background-size: cover;
+        background-size: contain;
+        background-repeat: no-repeat;
     }
 
     .bg-register-image {
-        background-image: url("{% static 'landingpage/assets/img/water.png' %}") !important;
+        background-image: url("{% static 'logo.png' %}") !important;
         background-position: center;
-        background-size: cover;
+        background-size: contain;
+        background-repeat: no-repeat;
     }
 </style>
 </head>
@@ -56,6 +58,29 @@
         <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
         <script>
             AOS.init();
+        </script>
+        <script>
+            document.addEventListener('click', function(e) {
+                var btn = e.target.closest('.js-password-toggle');
+                if (!btn) return;
+
+                var group = btn.closest('.input-group');
+                if (!group) return;
+
+                var input = group.querySelector('input');
+                if (!input) return;
+
+                var willShow = input.type === 'password';
+                input.type = willShow ? 'text' : 'password';
+
+                var icon = btn.querySelector('i');
+                if (icon) {
+                    icon.classList.toggle('fa-eye', !willShow);
+                    icon.classList.toggle('fa-eye-slash', willShow);
+                }
+
+                btn.setAttribute('aria-label', willShow ? 'Hide password' : 'Show password');
+            });
         </script>
         {% load sweetify %}
         {% sweetify %}
