@@ -65,18 +65,22 @@ class WaterBill(models.Model):
         today = timezone.localdate()
         if self.penaltydate and today >= self.penaltydate:
             try:
-                metric = Metric.objects.first()
-                if not metric:
-                    # If no metric exists, create one with default values
-                    metric = Metric.objects.create(
-                        consump_amount=1.0,
-                        penalty_amount=100.0
-                    )
-                return metric.penalty_amount
+                # Calculate number of days from penalty date to today
+                days_passed = (today - self.penaltydate).days
+                
+                # Return only the daily increment: 5 KSH per day
+                daily_penalty = days_passed * 5.0
+                
+                return daily_penalty
             except Exception as e:
                 # Fallback in case of any error
                 print(f"Error calculating penalty: {str(e)}")
-                return 100.0  # Default penalty amount
+                # Calculate days even in fallback
+                try:
+                    days_passed = (today - self.penaltydate).days
+                    return days_passed * 5.0  # Only daily increment
+                except:
+                    return 0  # Ultimate fallback
         return 0
 
     
