@@ -76,7 +76,7 @@ WSGI_APPLICATION = 'core.wsgi.application'
 DATABASES = {
     'default': dj_database_url.config(
         conn_max_age=600,
-        default='sqlite:///db.sqlite3'
+        default='postgresql://neondb_owner:npg_Ax4ZrpzSo1Om@ep-late-meadow-ah7dydxk-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
     )
 }
 
@@ -102,7 +102,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'Asia/Manila'
+TIME_ZONE = 'Africa/Nairobi'
 
 USE_I18N = True
 
@@ -125,7 +125,7 @@ STATICFILES_DIRS = [
 CREATE_SUPERUSER = os.environ.get("CREATE_SUPERUSER") == "1"
 
 
-OTP = False
+OTP = True
 OTP_EMAIL = "youremail@gmail.com"
 OTP_PASSWORD = "yourpassword"
 
