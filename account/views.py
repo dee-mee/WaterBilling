@@ -1,5 +1,5 @@
 from django.shortcuts import render, HttpResponseRedirect
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, login, logout, get_user_model
 from django.urls import reverse
 from .forms import *
 from .models import Account
@@ -21,10 +21,14 @@ def generate_otp():
     return otp
 
 
+User = get_user_model()
+
+
 def login_view(request):
     if request.method == 'POST':
         email = request.POST['email']
         password = request.POST['password']
+        remember_me = request.POST.get('remember_me')
         user = authenticate(request, email=email, password=password)
         if user is not None:
             # Check if user is approved by admin (superusers are always approved)
@@ -66,6 +70,12 @@ def login_view(request):
             else:
                 #Bypass OTP
                 login(request, user)
+                # Handle Remember Me: if not checked, expire session on browser close
+                if not remember_me:
+                    request.session.set_expiry(0)
+                else:
+                    # Two weeks
+                    request.session.set_expiry(60 * 60 * 24 * 14)
                 user = request.user
                 user.verified = True
                 user.save()
@@ -78,6 +88,85 @@ def login_view(request):
             sweetify.error(request, 'Invalid Credentialss')
             return render(request, 'account/login.html', {'error': 'Invalid Credentials'})
     return render(request, 'account/login.html')
+
+
+def forgot_password_view(request):
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return render(request, 'account/forgot_password.html', {'error': 'No account found with that email.'})
+
+        # Reuse OTP field as reset code
+        code = generate_otp()
+        user.otp = int(code)
+        user.save()
+
+        try:
+            SENDER_EMAIL = settings.OTP_EMAIL
+            SENDER_PASSWORD = settings.OTP_PASSWORD
+            SUBJECT = "Password Reset Code"
+            TEXT = f"Your password reset code is: {code}"
+            MESSAGE = 'Subject: {}\n\n{}'.format(SUBJECT, TEXT)
+            RECEIVER_EMAIL = email
+            SERVER = smtplib.SMTP('smtp.gmail.com', 587)
+            SERVER.starttls()
+            SERVER.login(SENDER_EMAIL, SENDER_PASSWORD)
+            SERVER.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, MESSAGE)
+            SERVER.quit()
+        except Exception:
+            # Even if email fails, avoid leaking details
+            return render(request, 'account/forgot_password.html', {
+                'error': 'There was a problem sending the reset code. Please try again later.'
+            })
+
+        return render(request, 'account/forgot_password.html', {
+            'message': 'We have sent a reset code to your email.'
+        })
+
+    return render(request, 'account/forgot_password.html')
+
+
+def reset_password_view(request):
+    if request.method == 'POST':
+        email = request.POST.get('email')
+        code = request.POST.get('code')
+        password = request.POST.get('password')
+        password2 = request.POST.get('password2')
+
+        if password != password2:
+            return render(request, 'account/reset_password.html', {
+                'error': 'Passwords do not match.'
+            })
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return render(request, 'account/reset_password.html', {
+                'error': 'No account found with that email.'
+            })
+
+        # Validate code
+        try:
+            if user.otp != int(code):
+                return render(request, 'account/reset_password.html', {
+                    'error': 'Invalid reset code.'
+                })
+        except (TypeError, ValueError):
+            return render(request, 'account/reset_password.html', {
+                'error': 'Invalid reset code.'
+            })
+
+        # Set new password
+        user.set_password(password)
+        user.otp = None
+        user.save()
+
+        sweetify.success(request, 'Password updated successfully. You can now log in.')
+        return HttpResponseRedirect(reverse('login'))
+
+    return render(request, 'account/reset_password.html')
 
 
 def verify(request):

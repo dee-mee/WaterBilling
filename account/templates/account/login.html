@@ -12,28 +12,45 @@
                         <div style="margin-bottom: 60px;" class="col-lg-6">
                             <div class="p-5">
                                 <div class="text-center">
-                                    <h1 class="h4 text-gray-900 mb-4">Login</h1>
+                                    <h1 class="h4 text-gray-900 mb-1">Timaji Water Services</h1>
+                                    <p class="mb-4 text-muted" style="font-size: 0.9rem;">Account Login</p>
                                 </div>
                                 <form action="{% url 'login' %}" method="POST" class="user">
                                     {% csrf_token %}
                                     <div class="form-group">
-                                    <input type="email" name="email" class="form-control form-control-user" id="email" placeholder="Email">
+                                        <input type="email" name="email" class="form-control form-control-user" id="email" placeholder="Email">
                                     </div>
                                     <div class="form-group">
-                                    <div class="input-group">
-                                        <input type="password" name="password" class="form-control form-control-user" id="password" placeholder="Password">
-                                        <div class="input-group-append">
-                                            <button class="btn btn-outline-secondary js-password-toggle" type="button" aria-label="Show password">
-                                                <i class="fa-solid fa-eye"></i>
-                                            </button>
+                                        <div class="input-group">
+                                            <input type="password" name="password" class="form-control form-control-user" id="password" placeholder="Password">
+                                            <div class="input-group-append">
+                                                <button class="btn btn-outline-secondary js-password-toggle" type="button" aria-label="Show password">
+                                                    <i class="fa-solid fa-eye"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
+                                    <div class="form-group d-flex align-items-center justify-content-between">
+                                        <div class="custom-control custom-checkbox small">
+                                            <input type="checkbox" class="custom-control-input" id="rememberMe" name="remember_me">
+                                            <label class="custom-control-label" for="rememberMe">Remember Me</label>
+                                        </div>
+                                        <a class="small" href="{% url 'forgot_password' %}">Forgot Password?</a>
                                     </div>
                                     <input type="submit" value="Login" class="btn btn-primary btn-user btn-block">
+                                    {% if error %}
+                                    <div class="text-center mt-2">
+                                        <small class="text-danger">{{ error }}</small>
+                                    </div>
+                                    {% endif %}
                                 </form>
                                 <hr>
                                 <div class="text-center">
                                     <a class="small" href="{% url 'register' %}">Create an Account!</a>
+                                </div>
+                                <div class="text-center mt-3">
+                                    <small class="text-muted d-block">Problems logging in? Call/WhatsApp: 0700 000 000</small>
+                                    <small class="text-muted d-block mt-1">Use "Remember Me" only on personal devices.</small>
                                 </div>
                             </div>
                         </div>

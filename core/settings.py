@@ -73,12 +73,21 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 
 
-DATABASES = {
-    'default': dj_database_url.config(
-        conn_max_age=600,
-        default='postgresql://neondb_owner:npg_Ax4ZrpzSo1Om@ep-late-meadow-ah7dydxk-pooler.c-3.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require'
-    )
-}
+DATABASE_URL = os.environ.get('DATABASE_URL')
+
+if DATABASE_URL:
+    # Use DATABASE_URL if provided (e.g. production on Render/Neon)
+    DATABASES = {
+        'default': dj_database_url.config(conn_max_age=600)
+    }
+else:
+    # Safe default for local development: SQLite
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 
@@ -125,7 +134,7 @@ STATICFILES_DIRS = [
 CREATE_SUPERUSER = os.environ.get("CREATE_SUPERUSER") == "1"
 
 
-OTP = True
+OTP = False
 OTP_EMAIL = "youremail@gmail.com"
 OTP_PASSWORD = "yourpassword"
 
