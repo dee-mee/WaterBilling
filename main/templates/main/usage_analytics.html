@@ -33,8 +33,109 @@
 </div>
 
 <script>
-    var chartLabels = {{ labels|safe }};
-    var chartData = {{ data|safe }};
+    document.addEventListener('DOMContentLoaded', function() {
+        try {
+            var chartLabels = {{ labels|safe }};
+            var chartData = {{ data|safe }};
+            
+            console.log('Usage Analytics Labels:', chartLabels);
+            console.log('Usage Analytics Data:', chartData);
+
+            if (!chartLabels || !chartData || chartLabels.length === 0) {
+                console.warn('No data available for usage analytics chart');
+                return;
+            }
+
+            // Get the canvas element
+            var ctx = document.getElementById('myAreaChart');
+            
+            if (!ctx) {
+                console.error('Could not find chart canvas element with ID "myAreaChart"');
+                return;
+            }
+
+            // Check if Chart is defined
+            if (typeof Chart === 'undefined') {
+                console.error('Chart.js is not loaded');
+                return;
+            }
+
+            // Create the chart
+            new Chart(ctx.getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [{
+                        label: 'Water Consumption',
+                        data: chartData,
+                        borderColor: 'rgba(78, 115, 223, 1)',
+                        backgroundColor: 'rgba(78, 115, 223, 0.1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: 'rgba(78, 115, 223, 1)',
+                        pointBorderColor: '#fff',
+                        pointHoverRadius: 5,
+                        pointHoverBackgroundColor: 'rgba(78, 115, 223, 1)',
+                        pointHoverBorderColor: '#fff',
+                        pointHitRadius: 10,
+                        pointBorderWidth: 2,
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { 
+                            display: false 
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Consumption: ${context.raw} units`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: { 
+                                display: true, 
+                                text: 'Water Consumption (units)',
+                                font: {
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                display: true,
+                                color: 'rgba(0, 0, 0, 0.05)'
+                            },
+                            ticks: {
+                                precision: 0
+                            }
+                        },
+                        x: {
+                            title: { 
+                                display: true, 
+                                text: 'Billing Period',
+                                font: {
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    }
+                }
+            });
+
+            console.log('Usage Analytics chart initialized successfully');
+        } catch (error) {
+            console.error('Error initializing usage analytics chart:', error);
+        }
+    });
 </script>
 
 {% endblock %}
