@@ -6,8 +6,18 @@ from .models import Account
 from main.models import *
 from django.conf import settings
 import sweetify
-import random as r
+import secrets
+import string
 import smtplib
+from django.utils.crypto import constant_time_compare
+from django.utils import timezone
+import datetime
+import logging
+
+logger = logging.getLogger(__name__)
+
+OTP_EXPIRY_MINUTES = 10
+OTP_MAX_ATTEMPTS = 5
 
 
 def landingpage(request):
@@ -15,10 +25,7 @@ def landingpage(request):
 
 
 def generate_otp():
-    otp = ""
-    for i in range(r.randint(5, 8)):
-        otp += str(r.randint(1, 9))
-    return otp
+    return "".join(secrets.choice(string.digits) for _ in range(6))
 
 
 User = get_user_model()
@@ -50,7 +57,9 @@ def login_view(request):
                     login(request, user)
                     user = request.user
                     otp = generate_otp()
-                    user.otp = otp
+                    user.otp = int(otp)
+                    user.otp_created_at = timezone.now()
+                    user.otp_attempts = 0
                     user.save()
                     try:
                         SENDER_EMAIL = settings.OTP_EMAIL
@@ -63,7 +72,8 @@ def login_view(request):
                         SERVER.starttls()
                         SERVER.login(SENDER_EMAIL, SENDER_PASSWORD)
                         SERVER.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, MESSAGE)
-                    except:
+                    except Exception as e:
+                        logger.error(f"Email sending failed: {e}")
                         return HttpResponseRedirect(reverse('verify'))
                     sweetify.success(request, 'Check your email for verification')
                     return HttpResponseRedirect(reverse('verify'))
@@ -93,14 +103,19 @@ def login_view(request):
 def forgot_password_view(request):
     if request.method == 'POST':
         email = request.POST.get('email')
+        # Always return same message to prevent email enumeration
+        safe_message = 'If an account exists with that email, a password reset link has been sent.'
+        
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
-            return render(request, 'account/forgot_password.html', {'error': 'No account found with that email.'})
+            return render(request, 'account/forgot_password.html', {'message': safe_message})
 
         # Reuse OTP field as reset code
         code = generate_otp()
         user.otp = int(code)
+        user.otp_created_at = timezone.now()
+        user.otp_attempts = 0
         user.save()
 
         try:
@@ -115,14 +130,13 @@ def forgot_password_view(request):
             SERVER.login(SENDER_EMAIL, SENDER_PASSWORD)
             SERVER.sendmail(SENDER_EMAIL, RECEIVER_EMAIL, MESSAGE)
             SERVER.quit()
-        except Exception:
-            # Even if email fails, avoid leaking details
-            return render(request, 'account/forgot_password.html', {
-                'error': 'There was a problem sending the reset code. Please try again later.'
-            })
+        except Exception as e:
+            logger.error(f"Password reset email failed for {email}: {e}")
+            # Even if email fails, return same message to prevent enumeration
+            return render(request, 'account/forgot_password.html', {'message': safe_message})
 
         return render(request, 'account/forgot_password.html', {
-            'message': 'We have sent a reset code to your email.'
+            'message': safe_message
         })
 
     return render(request, 'account/forgot_password.html')
@@ -147,9 +161,25 @@ def reset_password_view(request):
                 'error': 'No account found with that email.'
             })
 
-        # Validate code
+        # Check OTP expiration
+        if user.otp_created_at:
+            otp_age = timezone.now() - user.otp_created_at
+            if otp_age > datetime.timedelta(minutes=OTP_EXPIRY_MINUTES):
+                return render(request, 'account/reset_password.html', {
+                    'error': 'Reset code has expired. Please request a new one.'
+                })
+        
+        # Check OTP attempts
+        if user.otp_attempts >= OTP_MAX_ATTEMPTS:
+            return render(request, 'account/reset_password.html', {
+                'error': 'Too many failed attempts. Please request a new reset code.'
+            })
+
+        # Validate code with constant-time comparison
         try:
-            if user.otp != int(code):
+            if not user.otp or not constant_time_compare(str(user.otp), code):
+                user.otp_attempts += 1
+                user.save()
                 return render(request, 'account/reset_password.html', {
                     'error': 'Invalid reset code.'
                 })
@@ -161,6 +191,8 @@ def reset_password_view(request):
         # Set new password
         user.set_password(password)
         user.otp = None
+        user.otp_created_at = None
+        user.otp_attempts = 0
         user.save()
 
         sweetify.success(request, 'Password updated successfully. You can now log in.')
@@ -177,17 +209,48 @@ def verify(request):
     if request.method == 'POST':
         user = request.user
         otp_form = VerificationForm(request.POST)
-        user_otp = request.POST['otp']
-        otp = int(user_otp)
-        if otp == user.otp:
-            user = request.user
-            user.verified = True
+        user_otp = request.POST.get('otp', '')
+        
+        # Check OTP expiration
+        if user.otp_created_at:
+            otp_age = timezone.now() - user.otp_created_at
+            if otp_age > datetime.timedelta(minutes=OTP_EXPIRY_MINUTES):
+                return render(request, 'account/verify.html', {
+                    'error': 'OTP has expired. Please login again to get a new one.',
+                    'otp_form': otp_form
+                })
+        
+        # Check attempt limit
+        if user.otp_attempts >= OTP_MAX_ATTEMPTS:
+            return render(request, 'account/verify.html', {
+                'error': 'Too many failed attempts. Please login again.',
+                'otp_form': otp_form
+            })
+        
+        # Verify OTP with constant-time comparison
+        try:
+            if user.otp and constant_time_compare(str(user.otp), user_otp):
+                user.verified = True
+                user.otp = None
+                user.otp_created_at = None
+                user.otp_attempts = 0
+                user.save()
+                sweetify.success(request, 'Login Successfully')
+                return HttpResponseRedirect(reverse('ongoingbills'))
+            else:
+                user.otp_attempts += 1
+                user.save()
+                return render(request, 'account/verify.html', {
+                    'error': 'OTP is incorrect!',
+                    'otp_form': otp_form
+                })
+        except (TypeError, ValueError):
+            user.otp_attempts += 1
             user.save()
-            sweetify.success(request, 'Login Successfully')
-            return HttpResponseRedirect(reverse('ongoingbills'))
-        else:
-            print("failed")
-            return render(request, 'account/verify.html', {'error': 'OTP is incorrect!', 'otp_form': otp_form})
+            return render(request, 'account/verify.html', {
+                'error': 'Invalid OTP format!',
+                'otp_form': otp_form
+            })
 
     return render(request, 'account/verify.html', context)
 

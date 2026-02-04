@@ -6,16 +6,21 @@ import dropbox
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
-SECRET_KEY = os.environ.get('SECRET_KEY', default='django-insecure-u@d=el-b)c#y)02ne71+k&^8m0xu%y(77(7=#p2+3gn3m##bl^')
+SECRET_KEY = os.environ.get('SECRET_KEY')
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY environment variable must be set in production")
 
 
-DEBUG = 'RENDER' not in os.environ
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'https://*.onrender.com']
+CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://localhost:8000').split(',')
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in CSRF_TRUSTED_ORIGINS]
 
-CORS_ALLOWED_ORIGINS = ['http://localhost:8000', 'https://*.onrender.com']
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:8000').split(',')
+CORS_ALLOWED_ORIGINS = [origin.strip() for origin in CORS_ALLOWED_ORIGINS]
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'waterbilling-r92q.onrender.com', '.onrender.com']
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = [host.strip() for host in ALLOWED_HOSTS]
 
 
 AUTH_USER_MODEL = 'account.Account'
@@ -135,7 +140,35 @@ CREATE_SUPERUSER = os.environ.get("CREATE_SUPERUSER") == "1"
 
 
 OTP = False
-OTP_EMAIL = "youremail@gmail.com"
-OTP_PASSWORD = "yourpassword"
+OTP_EMAIL = os.environ.get('OTP_EMAIL', 'youremail@gmail.com')
+OTP_PASSWORD = os.environ.get('OTP_PASSWORD', 'yourpassword')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# ============ SECURITY SETTINGS ============
+# SSL/HTTPS Configuration
+SECURE_SSL_REDIRECT = not DEBUG
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+SECURE_BROWSER_XSS_FILTER = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_CONTENT_SECURITY_POLICY = {
+    'default-src': ("'self'",),
+    'script-src': ("'self'", "'unsafe-inline'"),  # unsafe-inline for Django admin
+    'style-src': ("'self'", "'unsafe-inline'"),
+    'img-src': ("'self'", "data:", "https:"),
+}
+
+# HSTS (HTTP Strict Transport Security)
+if not DEBUG:
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+else:
+    SECURE_HSTS_SECONDS = 0
+
+# Session and CSRF Configuration
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Strict'
+CSRF_COOKIE_SAMESITE = 'Strict'

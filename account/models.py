@@ -27,8 +27,10 @@ class AccountManager(UserManager):
         extra_fields.setdefault("first_name", "Water Billing")
         extra_fields.setdefault("admin_approved", True)  # Superusers are auto-approved
 
-        assert extra_fields["is_staff"]
-        assert extra_fields["is_superuser"]
+        if extra_fields.get("is_staff") is not True:
+            raise ValueError("Superuser must have is_staff=True.")
+        if extra_fields.get("is_superuser") is not True:
+            raise ValueError("Superuser must have is_superuser=True.")
         return self._create_user(email, password, **extra_fields)
 
 
@@ -36,6 +38,8 @@ class Account(AbstractUser):
     username = None  
     email = models.EmailField(unique=True)
     otp = models.IntegerField(null=True)
+    otp_created_at = models.DateTimeField(null=True, blank=True)
+    otp_attempts = models.IntegerField(default=0)
     verified = models.BooleanField(default=False)
     admin_approved = models.BooleanField(default=False, help_text="Designates whether this user has been approved by an admin.")
     rejected = models.BooleanField(default=False, help_text="Designates whether this user has been rejected by an admin.")
