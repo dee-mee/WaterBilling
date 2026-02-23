@@ -11,6 +11,7 @@ urlpatterns = [
     path('client/delete/<str:pk>', views.client_delete, name="clientdelete"),
 
     path('export-clients-csv/', views.export_clients_csv, name='export_clients_csv'),
+    path('export-meter-readings-csv/', views.export_meter_readings_csv, name='export_meter_readings_csv'),
 
     path('bills/ongoing', views.ongoing_bills, name="ongoingbills"),
     path('bills/history', views.history_bills, name="billshistory"),

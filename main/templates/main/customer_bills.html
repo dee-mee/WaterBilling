@@ -52,6 +52,7 @@
                     <thead class="bg-light">
                         <tr>
                             <th>Month</th>
+                            <th>Quote Date</th>
                             <th>Previous Reading</th>
                             <th>Current Reading</th>
                             <th>Consumption (cu.m)</th>
@@ -67,6 +68,7 @@
                         {% for bill in bill_data %}
                         <tr>
                             <td class="font-weight-bold">{{ bill.month }}</td>
+                            <td>{{ bill.billing_date|date:"d M, Y" }}</td>
                             <td class="text-right">{{ bill.previous_reading }}</td>
                             <td class="text-right">{{ bill.present_reading }}</td>
                             <td class="text-right">{{ bill.consumption }}</td>

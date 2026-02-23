@@ -24,6 +24,9 @@
                 </div>
                 <button type="submit" class="btn btn-primary">Filter</button>
                 <a href="{% url 'meter_readings_dashboard' %}" class="btn btn-secondary ml-2">Clear</a>
+                <a href="{% url 'export_meter_readings_csv' %}" class="btn btn-success ml-2" title="Download as CSV">
+                    <i class="fa-solid fa-download"></i> Export Spreadsheet
+                </a>
             </form>
         </div>
     </div>
@@ -42,6 +45,7 @@
                             <th>Customer Name</th>
                             <th>Status</th>
                             <th>Month</th>
+                            <th>Quote Date</th>
                             <th>Previous Reading</th>
                             <th>Current Reading</th>
                             <th>Consumption (cu.m)</th>
@@ -62,6 +66,7 @@
                                 </span>
                             </td>
                             <td>{{ data.month }}</td>
+                            <td>{{ data.billing_date|date:"d M, Y"|default:"—" }}</td>
                             <td class="text-right">{{ data.previous_reading|default:"—" }}</td>
                             <td class="text-right">{{ data.current_reading|default:"—" }}</td>
                             <td class="text-right font-weight-bold">{{ data.consumption|default:"—" }}</td>

@@ -47,6 +47,44 @@ def export_clients_csv(request):
 
     return response
 
+
+@user_passes_test(lambda u: u.is_superuser)
+def export_meter_readings_csv(request):
+    """Export all meter readings with quote dates to CSV"""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="meter_readings.csv"'
+
+    writer = csv.writer(response)
+    writer.writerow([
+        'Meter Number', 'Customer Name', 'Quote Date', 'Month', 
+        'Previous Reading', 'Current Reading', 'Consumption (cu.m)', 
+        'Bill Amount (KES)', 'Penalty (KES)', 'Total Due (KES)', 
+        'Payment Status', 'Due Date', 'Connection Status'
+    ])
+
+    # Get all bills with related client data
+    bills = WaterBill.objects.select_related('name').order_by('-billing_date')
+    
+    for bill in bills:
+        client = bill.name
+        writer.writerow([
+            client.meter_number if client else 'N/A',
+            f"{client.last_name}, {client.first_name}" if client else 'N/A',
+            bill.billing_date.strftime('%d-%m-%Y') if bill.billing_date else 'N/A',
+            bill.billing_date.strftime('%B %Y') if bill.billing_date else 'N/A',
+            bill.previous_reading or '',
+            bill.present_reading or '',
+            bill.meter_consumption or '',
+            bill.compute_bill() or '',
+            bill.penalty() or '',
+            bill.payable() or '',
+            bill.payment_status or 'N/A',
+            bill.duedate.strftime('%d-%m-%Y') if bill.duedate else 'N/A',
+            client.status if client else 'N/A',
+        ])
+
+    return response
+
 from django.shortcuts import get_object_or_404
 import logging
 from django.utils import timezone
@@ -1327,6 +1365,7 @@ def meter_readings_dashboard(request):
             'consumption': latest_bill.meter_consumption if latest_bill else None,
             'bill_amount': latest_bill.compute_bill() if latest_bill else None,
             'month': latest_bill.billing_date.strftime('%B %Y') if latest_bill else 'N/A',
+            'billing_date': latest_bill.billing_date if latest_bill else None,
             'payment_status': latest_bill.payment_status if latest_bill else 'N/A',
         }
         client_data.append(data)
