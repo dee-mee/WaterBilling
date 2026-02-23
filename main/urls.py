@@ -58,5 +58,11 @@ urlpatterns = [
     path('support-tickets/', views.support_tickets, name='support_tickets'),
     path('support-ticket/update/<int:pk>', views.update_ticket, name='update_ticket'),
 
+    path('meter-readings/', views.meter_readings_dashboard, name='meter_readings_dashboard'),
+    path('meter-readings/add/<int:client_id>', views.add_meter_reading, name='add_meter_reading'),
+    path('meter-readings/history/<int:client_id>', views.customer_reading_history, name='customer_reading_history'),
+    
+    path('my-bills/', views.customer_bills_view, name='customer_bills'),
+
     
 ]

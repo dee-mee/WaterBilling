@@ -13,6 +13,8 @@ from django.utils.crypto import constant_time_compare
 from django.utils import timezone
 import datetime
 import logging
+from django.http import HttpResponseNotAllowed
+from django.views.decorators.http import require_http_methods
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +102,7 @@ def login_view(request):
     return render(request, 'account/login.html')
 
 
+@require_http_methods(["GET", "POST"])
 def forgot_password_view(request):
     if request.method == 'POST':
         email = request.POST.get('email')
@@ -139,7 +142,11 @@ def forgot_password_view(request):
             'message': safe_message
         })
 
-    return render(request, 'account/forgot_password.html')
+    else: # request.method == 'GET'
+        # If a GET request tries to pass email, reject it as it might be an attempt to bypass POST
+        if 'email' in request.GET:
+            return HttpResponseNotAllowed(['POST'])
+        return render(request, 'account/forgot_password.html')
 
 
 def reset_password_view(request):

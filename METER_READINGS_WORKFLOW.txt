@@ -1,0 +1,188 @@
+================================================================================
+                    METER READINGS WORKFLOW DIAGRAM
+================================================================================
+
+ADMIN DASHBOARD
+    |
+    +---> Bills Menu
+             |
+             +---> Meter Readings (NEW!)
+                     |
+                     +---> Dashboard View (/meter-readings/)
+                     |       |
+                     |       +---> Search by name/meter/phone
+                     |       |
+                     |       +---> Filter by status
+                     |       |
+                     |       +---> Display Table:
+                     |               - Meter Number
+                     |               - Customer Name
+                     |               - Status
+                     |               - Month | Prev | Current | Consumption | Bill
+                     |               - Payment Status
+                     |               - Actions (Add/History/Edit)
+                     |
+                     +---> Add Reading (/meter-readings/add/<id>)
+                     |       |
+                     |       +---> Form Fields:
+                     |               - Customer (pre-filled)
+                     |               - Previous Reading (auto-filled)
+                     |               - Current Reading (user input)
+                     |               - Meter Consumption (auto-calculated)
+                     |               - Dates & Status
+                     |
+                     |       +---> JavaScript Auto-Calculate:
+                     |               Consumption = Current - Previous
+                     |
+                     |       +---> Database Save:
+                     |               - Creates WaterBill record
+                     |               - Triggers SMS notification
+                     |               - Redirects to dashboard
+                     |
+                     +---> View History (/meter-readings/history/<id>)
+                             |
+                             +---> Display all readings (chronological)
+                             |
+                             +---> Show calculations for each
+                             |
+                             +---> Summary metrics (total readings, paid bills)
+
+
+================================================================================
+                         BILLING CALCULATION FLOW
+================================================================================
+
+Input Data:
+  Previous Reading: 1,000 cu.m
+  Current Reading:  1,050 cu.m
+
+                          ↓
+
+Auto-Calculate Consumption:
+  Consumption = 1,050 - 1,000 = 50 cu.m
+
+                          ↓
+
+Calculate Bill Amount:
+  Bill = 50 cu.m × 200 KES/cu.m = 10,000 KES
+
+                          ↓
+
+Calculate Penalty (if applicable):
+  If (today > penalty_date):
+    Days Overdue = today - penalty_date
+    Penalty = Days Overdue × 5 KES
+  Else:
+    Penalty = 0
+
+                          ↓
+
+Total Payable Amount:
+  Total = Bill + Penalty
+  Total = 10,000 + Penalty
+
+
+================================================================================
+                          ADMIN USER ACTIONS
+================================================================================
+
+1. NAVIGATE TO DASHBOARD
+   Sidebar: Bills > Meter Readings
+   OR Direct URL: /meter-readings/
+
+2. SEARCH/FILTER CUSTOMERS
+   - Type in search box (name/meter/phone)
+   - Select status filter
+   - View filtered results
+
+3. ADD METER READING
+   - Click [+] button on customer row
+   - Enter current meter reading
+   - Review auto-calculated consumption
+   - Set dates and payment status
+   - Click "Save Reading"
+   - Bill created automatically
+   - SMS notification sent to customer
+
+4. REVIEW READING HISTORY
+   - Click [⏱] button on customer row
+   - See all past readings and bills
+   - View consumption trends
+   - Access edit functionality
+
+5. EDIT EXISTING READING
+   - Click [✎] button
+   - Modify any field
+   - Recalculates automatically
+   - Save changes
+
+
+================================================================================
+                        DATABASE RELATIONSHIPS
+================================================================================
+
+Account (User)
+    |
+    +---> Client (Customer)
+            |
+            +---> meter_number
+            +---> contact_number
+            +---> status
+            +---> address
+            |
+            +---> WaterBill (Billing Records)
+                    |
+                    +---> previous_reading
+                    +---> present_reading (current)
+                    +---> meter_consumption (calculated)
+                    +---> billing_date
+                    +---> duedate
+                    +---> penaltydate
+                    +---> payment_status
+                    +---> approval_status
+
+Metric (Configuration)
+    |
+    +---> consump_amount = 200 (KES per cu.m)
+    +---> penalty_amount = 5 (KES per day)
+
+
+================================================================================
+                        KEY FEATURES SUMMARY
+================================================================================
+
+✓ DASHBOARD
+  - Table view of all customers
+  - Current meter reading data
+  - Quick status indicators
+  - Search & filter functionality
+
+✓ AUTO-CALCULATION
+  - Consumption calculated in real-time
+  - Bill amount auto-computed
+  - Penalty calculated dynamically
+
+✓ FORM VALIDATION
+  - Required fields checked
+  - Numeric fields validated
+  - Dates validated
+
+✓ HISTORY TRACKING
+  - All readings stored
+  - Monthly records viewable
+  - Consumption trends visible
+  - Edit history available
+
+✓ NAVIGATION
+  - Easy access from sidebar
+  - Back buttons on all pages
+  - Consistent UI/UX
+
+✓ SECURITY
+  - Admin-only access
+  - CSRF protection
+  - Input validation
+  - Error handling
+
+
+================================================================================

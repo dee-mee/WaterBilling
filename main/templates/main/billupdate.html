@@ -12,6 +12,14 @@
         {{ form.name }}
     </div>
     <div class="form-group mt-3">
+        <label>Previous Reading: </label> <br>
+        {{ form.previous_reading }}
+    </div>
+    <div class="form-group mt-3">
+        <label>Present Reading: </label> <br>
+        {{ form.present_reading }}
+    </div>
+    <div class="form-group mt-3">
         <label>Meter Consumption: </label> <br>
         {{ form.meter_consumption }}
     </div>
@@ -43,4 +51,26 @@
 </form>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const prevReading = document.querySelector('input[name="previous_reading"]');
+    const presReading = document.querySelector('input[name="present_reading"]');
+    const consumption = document.querySelector('input[name="meter_consumption"]');
+
+    function calculateConsumption() {
+        const prev = parseFloat(prevReading.value) || 0;
+        const pres = parseFloat(presReading.value) || 0;
+        if (pres >= prev) {
+            consumption.value = pres - prev;
+        } else {
+            consumption.value = 0;
+        }
+    }
+
+    if (prevReading && presReading) {
+        prevReading.addEventListener('input', calculateConsumption);
+        presReading.addEventListener('input', calculateConsumption);
+    }
+});
+</script>
 {% endblock %}

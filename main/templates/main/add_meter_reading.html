@@ -1,0 +1,162 @@
+{% extends 'main/layout.html' %}
+{% load static %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="mb-4">
+        <a href="{% url 'meter_readings_dashboard' %}" class="btn btn-secondary mb-3">
+            <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+        </a>
+        <h1 class="h3 text-primary font-weight-bolder">Add Meter Reading</h1>
+        <p class="text-muted">Customer: <strong>{{ client.first_name }} {{ client.last_name }}</strong> (Meter #: {{ client.meter_number }})</p>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary">
+                    <h6 class="m-0 font-weight-bold text-white">Enter Reading Details</h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="">
+                        {% csrf_token %}
+                        
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="id_name">Customer:</label>
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                    <div class="alert alert-danger small mt-1">{{ form.name.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="id_previous_reading">Previous Reading:</label>
+                                {{ form.previous_reading }}
+                                {% if form.previous_reading.errors %}
+                                    <div class="alert alert-danger small mt-1">{{ form.previous_reading.errors }}</div>
+                                {% endif %}
+                                <small class="form-text text-muted">Last recorded reading</small>
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="id_present_reading">Current Reading:</label>
+                                {{ form.present_reading }}
+                                {% if form.present_reading.errors %}
+                                    <div class="alert alert-danger small mt-1">{{ form.present_reading.errors }}</div>
+                                {% endif %}
+                                <small class="form-text text-muted">Today's meter reading</small>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="id_meter_consumption">Consumption (cu.m):</label>
+                                {{ form.meter_consumption }}
+                                {% if form.meter_consumption.errors %}
+                                    <div class="alert alert-danger small mt-1">{{ form.meter_consumption.errors }}</div>
+                                {% endif %}
+                                <small class="form-text text-muted">Auto-calculated: Current - Previous</small>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="id_billing_date">Billing Date:</label>
+                                {{ form.billing_date }}
+                                {% if form.billing_date.errors %}
+                                    <div class="alert alert-danger small mt-1">{{ form.billing_date.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="id_payment_status">Payment Status:</label>
+                                {{ form.payment_status }}
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="id_duedate">Due Date:</label>
+                                {{ form.duedate }}
+                                {% if form.duedate.errors %}
+                                    <div class="alert alert-danger small mt-1">{{ form.duedate.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="form-group col-md-6">
+                                <label for="id_penaltydate">Penalty Date:</label>
+                                {{ form.penaltydate }}
+                                {% if form.penaltydate.errors %}
+                                    <div class="alert alert-danger small mt-1">{{ form.penaltydate.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group col-md-6">
+                                <label for="id_approval_status">Approval Status:</label>
+                                {{ form.approval_status }}
+                            </div>
+                        </div>
+
+                        <div class="form-group mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fa-solid fa-check"></i> Save Reading
+                            </button>
+                            <a href="{% url 'meter_readings_dashboard' %}" class="btn btn-secondary btn-lg">
+                                <i class="fa-solid fa-times"></i> Cancel
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow bg-light">
+                <div class="card-header bg-info">
+                    <h6 class="m-0 font-weight-bold text-white">Billing Info</h6>
+                </div>
+                <div class="card-body">
+                    <p><strong>Rate:</strong> KES 200 per cubic meter</p>
+                    <p><strong>Penalty:</strong> KES 5 per day (after penalty date)</p>
+                    
+                    <div class="alert alert-info mt-3">
+                        <strong>Formula:</strong>
+                        <ul class="mb-0 small">
+                            <li>Consumption = Current - Previous</li>
+                            <li>Bill = Consumption × 200</li>
+                            <li>Total = Bill + Penalty (if overdue)</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const prevReading = document.querySelector('input[name="previous_reading"]');
+    const presReading = document.querySelector('input[name="present_reading"]');
+    const consumption = document.querySelector('input[name="meter_consumption"]');
+
+    function calculateConsumption() {
+        const prev = parseFloat(prevReading.value) || 0;
+        const pres = parseFloat(presReading.value) || 0;
+        if (pres >= prev) {
+            consumption.value = pres - prev;
+        } else {
+            consumption.value = 0;
+        }
+    }
+
+    if (prevReading && presReading && consumption) {
+        prevReading.addEventListener('input', calculateConsumption);
+        presReading.addEventListener('input', calculateConsumption);
+    }
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,136 @@
+{% extends 'main/layout.html' %}
+{% load static %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="d-flex align-items-center mb-4">
+        <h1 class="h3 text-primary font-weight-bolder">Meter Readings Dashboard</h1>
+    </div>
+
+    <!-- Search and Filter -->
+    <div class="card shadow mb-4">
+        <div class="card-body">
+            <form method="GET" action="" class="form-inline">
+                <div class="form-group mr-3">
+                    <input type="text" name="search" class="form-control" placeholder="Search by name, meter #, or phone" value="{{ search_query }}">
+                </div>
+                <div class="form-group mr-3">
+                    <select name="status" class="form-control">
+                        <option value="">All Status</option>
+                        <option value="Connected" {% if status_filter == 'Connected' %}selected{% endif %}>Connected</option>
+                        <option value="Disconnected" {% if status_filter == 'Disconnected' %}selected{% endif %}>Disconnected</option>
+                        <option value="Pending" {% if status_filter == 'Pending' %}selected{% endif %}>Pending</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Filter</button>
+                <a href="{% url 'meter_readings_dashboard' %}" class="btn btn-secondary ml-2">Clear</a>
+            </form>
+        </div>
+    </div>
+
+    <!-- Meter Readings Table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Meter Readings by Customer</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="dataTable">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Meter Number</th>
+                            <th>Customer Name</th>
+                            <th>Status</th>
+                            <th>Month</th>
+                            <th>Previous Reading</th>
+                            <th>Current Reading</th>
+                            <th>Consumption (cu.m)</th>
+                            <th>Bill (KES)</th>
+                            <th>Payment Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for data in client_data %}
+                        <tr>
+                            <td class="font-weight-bold">{{ data.meter_number }}</td>
+                            <td>{{ data.name }}</td>
+                            <td>
+                                <span class="badge 
+                                    {% if data.status == 'Connected' %}badge-success{% elif data.status == 'Disconnected' %}badge-danger{% else %}badge-warning{% endif %}">
+                                    {{ data.status }}
+                                </span>
+                            </td>
+                            <td>{{ data.month }}</td>
+                            <td class="text-right">{{ data.previous_reading|default:"—" }}</td>
+                            <td class="text-right">{{ data.current_reading|default:"—" }}</td>
+                            <td class="text-right font-weight-bold">{{ data.consumption|default:"—" }}</td>
+                            <td class="text-right font-weight-bold text-primary">
+                                {% if data.bill_amount %}
+                                    {{ data.bill_amount|floatformat:0 }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if data.payment_status == 'Paid' %}
+                                    <span class="badge badge-success">Paid</span>
+                                {% elif data.payment_status == 'Pending' %}
+                                    <span class="badge badge-warning">Pending</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">{{ data.payment_status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="{% url 'add_meter_reading' data.client.id %}" class="btn btn-sm btn-primary" title="Add Reading">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </a>
+                                    <a href="{% url 'customer_reading_history' data.client.id %}" class="btn btn-sm btn-info" title="View History">
+                                        <i class="fa-solid fa-history"></i>
+                                    </a>
+                                    {% if data.latest_bill %}
+                                        <a href="{% url 'billupdate' data.latest_bill.id %}" class="btn btn-sm btn-warning" title="Edit">
+                                            <i class="fa-regular fa-pen-to-square"></i>
+                                        </a>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center text-muted py-4">
+                                No customers found. <a href="{% url 'add_customer' %}">Add a customer</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<style>
+    .table-hover tbody tr:hover {
+        background-color: #f5f5f5;
+    }
+    
+    .btn-group {
+        display: flex;
+        gap: 0.25rem;
+    }
+</style>
+
+<script>
+    // Initialize DataTable if needed
+    $(document).ready(function() {
+        $('#dataTable').DataTable({
+            order: [[0, 'asc']],
+            pageLength: 25,
+        });
+    });
+</script>
+
+{% endblock %}

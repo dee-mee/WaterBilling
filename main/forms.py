@@ -9,11 +9,13 @@ class BillForm(forms.ModelForm):
 
     class Meta:
         model = WaterBill
-        fields = ['name','meter_consumption', 'payment_status', 'approval_status', 'billing_date', 'duedate', 'penaltydate']
+        fields = ['name', 'previous_reading', 'present_reading', 'meter_consumption', 'payment_status', 'approval_status', 'billing_date', 'duedate', 'penaltydate']
         exclude = ['penalty', 'bill',]
         widgets = {
             'name': forms.Select(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'Name' }),
-            'meter_consumption': forms.TextInput(attrs={'type': 'number', 'class': 'form-control', 'placeholder':'00000000' }),
+            'previous_reading': forms.TextInput(attrs={'type': 'number', 'class': 'form-control', 'placeholder':'Previous Reading' }),
+            'present_reading': forms.TextInput(attrs={'type': 'number', 'class': 'form-control', 'placeholder':'Present Reading' }),
+            'meter_consumption': forms.TextInput(attrs={'type': 'number', 'class': 'form-control', 'placeholder':'Consumption' }),
             'payment_status': forms.Select(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'Pay Status' }),
             'approval_status': forms.Select(attrs={'class': 'form-control', 'placeholder':'Approval Status' }),
             'duedate': forms.TextInput(attrs={'type': 'date', 'class': 'form-control', 'placeholder':'Due Date' }),

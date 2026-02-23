@@ -1,0 +1,103 @@
+{% extends 'main/layout.html' %}
+{% load static %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="mb-4">
+        <a href="{% url 'meter_readings_dashboard' %}" class="btn btn-secondary mb-3">
+            <i class="fa-solid fa-arrow-left"></i> Back to Dashboard
+        </a>
+        <h1 class="h3 text-primary font-weight-bolder">Meter Reading History</h1>
+        <p class="text-muted">Customer: <strong>{{ client.first_name }} {{ client.last_name }}</strong> (Meter #: {{ client.meter_number }})</p>
+    </div>
+
+    <div class="card shadow">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">All Readings - Sorted by Month (Latest First)</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Month</th>
+                            <th>Previous Reading</th>
+                            <th>Current Reading</th>
+                            <th>Consumption (cu.m)</th>
+                            <th>Bill Amount (KES)</th>
+                            <th>Payment Status</th>
+                            <th>Approval Status</th>
+                            <th>Due Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bill in bills %}
+                        <tr>
+                            <td class="font-weight-bold">{{ bill.billing_date|date:"F Y" }}</td>
+                            <td class="text-right">{{ bill.previous_reading }}</td>
+                            <td class="text-right">{{ bill.present_reading }}</td>
+                            <td class="text-right font-weight-bold">{{ bill.meter_consumption }}</td>
+                            <td class="text-right font-weight-bold text-primary">{{ bill.compute_bill|floatformat:0 }}</td>
+                            <td>
+                                {% if bill.payment_status == 'Paid' %}
+                                    <span class="badge badge-success">Paid</span>
+                                {% elif bill.payment_status == 'Pending' %}
+                                    <span class="badge badge-warning">Pending</span>
+                                {% else %}
+                                    <span class="badge badge-secondary">{{ bill.payment_status }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if bill.approval_status == 'Approved' %}
+                                    <span class="badge badge-success">Approved</span>
+                                {% elif bill.approval_status == 'Pending Approval' %}
+                                    <span class="badge badge-warning">Pending</span>
+                                {% elif bill.approval_status == 'Rejected' %}
+                                    <span class="badge badge-danger">Rejected</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ bill.duedate|date:"M d, Y" }}</td>
+                            <td>
+                                <a href="{% url 'billupdate' bill.id %}" class="btn btn-sm btn-primary">
+                                    <i class="fa-regular fa-pen-to-square"></i> Edit
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="9" class="text-center text-muted py-4">
+                                No readings found for this customer.
+                                <a href="{% url 'add_meter_reading' client.id %}">Add the first reading</a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Card -->
+    <div class="row mt-4">
+        <div class="col-lg-3">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="text-primary font-weight-bold text-uppercase mb-1">Total Readings</div>
+                    <div class="h3 mb-0">{{ bills|length }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="text-success font-weight-bold text-uppercase mb-1">Paid Bills</div>
+                    <div class="h3 mb-0">{{ bills|dictsort:"payment_status"|length }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+{% endblock %}

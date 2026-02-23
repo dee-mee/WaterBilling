@@ -51,7 +51,7 @@ class WaterBill(models.Model):
             if not metric:
                 # If no metric exists, create one with default values
                 metric = Metric.objects.create(
-                    consump_amount=1.0,
+                    consump_amount=200.0,
                     penalty_amount=100.0
                 )
             consump_amount = metric.consump_amount
@@ -59,7 +59,7 @@ class WaterBill(models.Model):
         except Exception as e:
             # Fallback in case of any error
             print(f"Error computing bill: {str(e)}")
-            return self.meter_consumption * 1.0 if self.meter_consumption else 0
+            return self.meter_consumption * 200.0 if self.meter_consumption else 0
 
     def penalty(self):
         today = timezone.localdate()
@@ -90,6 +90,11 @@ class WaterBill(models.Model):
             return self.compute_bill() + self.penalty()
         return self.compute_bill()
 
+    def save(self, *args, **kwargs):
+        if self.meter_consumption is None and self.present_reading is not None and self.previous_reading is not None:
+            self.meter_consumption = self.present_reading - self.previous_reading
+        super().save(*args, **kwargs)
+
 
     def __str__(self):
         return f'{self.name}'
@@ -97,7 +102,7 @@ class WaterBill(models.Model):
 
 class Metric(models.Model):
     user = models.OneToOneField(Account, on_delete=models.CASCADE, null=True)
-    consump_amount = models.FloatField(default=1, null=True)
+    consump_amount = models.FloatField(default=200, null=True)
     penalty_amount = models.FloatField(default=1, null=True)
 
 

@@ -1,0 +1,176 @@
+{% extends 'main/layout.html' %}
+{% load static %}
+
+{% block body %}
+<div class="container-fluid">
+    <div class="mb-4">
+        <h1 class="h3 text-primary font-weight-bolder">My Bills & Receipts</h1>
+        <p class="text-muted">View all your water bills and download receipts</p>
+    </div>
+
+    {% if client %}
+    <!-- Customer Summary Card -->
+    <div class="row mb-4">
+        <div class="col-lg-3">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="text-primary font-weight-bold text-uppercase mb-1">Meter Number</div>
+                    <div class="h4 mb-0">{{ client.meter_number }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="text-info font-weight-bold text-uppercase mb-1">Connection Status</div>
+                    <div class="h4 mb-0">
+                        <span class="badge {% if client.status == 'Connected' %}badge-success{% elif client.status == 'Disconnected' %}badge-danger{% else %}badge-warning{% endif %}">
+                            {{ client.status }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-3">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="text-warning font-weight-bold text-uppercase mb-1">Total Bills</div>
+                    <div class="h4 mb-0">{{ bill_data|length }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bills Table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Billing History</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="billsTable">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>Month</th>
+                            <th>Previous Reading</th>
+                            <th>Current Reading</th>
+                            <th>Consumption (cu.m)</th>
+                            <th>Bill Amount (KES)</th>
+                            <th>Penalty (KES)</th>
+                            <th>Total Due (KES)</th>
+                            <th>Payment Status</th>
+                            <th>Due Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bill in bill_data %}
+                        <tr>
+                            <td class="font-weight-bold">{{ bill.month }}</td>
+                            <td class="text-right">{{ bill.previous_reading }}</td>
+                            <td class="text-right">{{ bill.present_reading }}</td>
+                            <td class="text-right">{{ bill.consumption }}</td>
+                            <td class="text-right">
+                                <strong class="text-primary">{{ bill.bill_amount|floatformat:0 }}</strong>
+                            </td>
+                            <td class="text-right">
+                                {% if bill.penalty > 0 %}
+                                    <span class="text-danger">{{ bill.penalty|floatformat:0 }}</span>
+                                {% else %}
+                                    <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-right">
+                                <strong class="text-success">{{ bill.total|floatformat:0 }}</strong>
+                            </td>
+                            <td>
+                                {% if bill.payment_status == 'Paid' %}
+                                    <span class="badge badge-success">Paid</span>
+                                {% else %}
+                                    <span class="badge badge-warning">Pending Payment</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ bill.due_date|date:"M d, Y" }}</td>
+                            <td>
+                                <a href="{% url 'download_invoice' bill.id %}" 
+                                   class="btn btn-sm btn-primary" 
+                                   title="Download Receipt">
+                                    <i class="fa-solid fa-download"></i> Receipt
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="10" class="text-center text-muted py-4">
+                                No bills available yet. Please wait for your first bill to be generated.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bill Information Card -->
+    <div class="card shadow mb-4 bg-light">
+        <div class="card-header bg-info">
+            <h6 class="m-0 font-weight-bold text-white">📋 How to Read Your Bill</h6>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <h6 class="font-weight-bold">Components of Your Bill:</h6>
+                    <ul class="small">
+                        <li><strong>Previous Reading:</strong> Meter reading from last billing cycle</li>
+                        <li><strong>Current Reading:</strong> Meter reading this month</li>
+                        <li><strong>Consumption:</strong> Current - Previous</li>
+                        <li><strong>Bill Amount:</strong> Consumption × 200 KES per cu.m</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <h6 class="font-weight-bold">Payment Information:</h6>
+                    <ul class="small">
+                        <li><strong>Due Date:</strong> Payment deadline</li>
+                        <li><strong>Penalty Date:</strong> Late payment penalties start after this date</li>
+                        <li><strong>Penalty Rate:</strong> 5 KES per day after penalty date</li>
+                        <li><strong>Total Due:</strong> Bill Amount + Penalties (if any)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="alert alert-info">
+        <i class="fa-solid fa-info-circle"></i> 
+        Your meter information is being set up. Please contact support if you don't see your bills soon.
+    </div>
+    {% endif %}
+
+</div>
+
+<style>
+    .table-hover tbody tr:hover {
+        background-color: #f5f5f5 !important;
+    }
+    
+    .badge {
+        padding: 0.35rem 0.65rem;
+        font-size: 0.85rem;
+    }
+</style>
+
+<script>
+    $(document).ready(function() {
+        $('#billsTable').DataTable({
+            order: [[0, 'desc']],
+            pageLength: 25,
+            columnDefs: [
+                { "orderable": false, "targets": 9 } // Disable sorting on Action column
+            ]
+        });
+    });
+</script>
+
+{% endblock %}

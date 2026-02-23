@@ -17,7 +17,10 @@
                     <thead>
                         <tr>
                             <th>Name</th>
-                            <th>Cubic Meter Consumption</th>
+                            <th>Month</th>
+                            <th>Previous Reading</th>
+                            <th>Current Reading</th>
+                            <th>Consumption</th>
                             <th>Consumption Cost</th>
                             <th>Due Date</th>
                             <th>Penalty Date</th>
@@ -37,6 +40,9 @@
                        {% for bill in billshistory %}
                         <tr>
                             <td> {{bill.name}} </td>
+                            <td> {{bill.billing_date|date:"F Y"}} </td>
+                            <td> {{bill.previous_reading}} </td>
+                            <td> {{bill.present_reading}} </td>
                             <td> {{bill.meter_consumption}} cu.m</td> 
                             <td> KSh {{bill.compute_bill}}</td> 
                             <td> {{bill.duedate}} </td> 

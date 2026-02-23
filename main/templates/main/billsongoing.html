@@ -24,7 +24,10 @@
                     <thead>
                         <tr>
                             <th>Name</th>
-                            <th>Cubic Meter Consumption</th>
+                            <th>Month</th>
+                            <th>Previous Reading</th>
+                            <th>Current Reading</th>
+                            <th>Consumption</th>
                             <th>Consumption Cost</th>
                             <th>Due Date</th>
                             <th>Penalty Date</th>
@@ -38,6 +41,9 @@
                        {% for bill in ongoingbills %}
                         <tr>
                             <td> {{bill.name}} </td>
+                            <td> {{bill.billing_date|date:"F Y"}} </td>
+                            <td> {{bill.previous_reading}} </td>
+                            <td> {{bill.present_reading}} </td>
                             <td> {{bill.meter_consumption}} cu.m</td> 
                             <td> KSh {{bill.compute_bill}}</td> 
                             <td> {{bill.duedate}} </td> 
@@ -92,6 +98,14 @@
                         {{ form.name }}
                     </div>
                     <div class="form-group mt-3">
+                        <label>Previous Reading: </label> <br>
+                        {{ form.previous_reading }}
+                    </div>
+                    <div class="form-group mt-3">
+                        <label>Present Reading: </label> <br>
+                        {{ form.present_reading }}
+                    </div>
+                    <div class="form-group mt-3">
                         <label>Meter Consumption: </label> <br>
                         {{ form.meter_consumption }}
                     </div>
@@ -128,4 +142,27 @@
 {% endif %}
 
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const prevReading = document.querySelector('input[name="previous_reading"]');
+    const presReading = document.querySelector('input[name="present_reading"]');
+    const consumption = document.querySelector('input[name="meter_consumption"]');
+
+    function calculateConsumption() {
+        const prev = parseFloat(prevReading.value) || 0;
+        const pres = parseFloat(presReading.value) || 0;
+        if (pres >= prev) {
+            consumption.value = pres - prev;
+        } else {
+            consumption.value = 0;
+        }
+    }
+
+    if (prevReading && presReading) {
+        prevReading.addEventListener('input', calculateConsumption);
+        presReading.addEventListener('input', calculateConsumption);
+    }
+});
+</script>
 {% endblock %}

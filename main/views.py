@@ -1283,3 +1283,164 @@ def update_ticket(request, pk):
         return redirect('support_tickets')
     
     return redirect('support_tickets')
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def meter_readings_dashboard(request):
+    """
+    Admin dashboard for viewing and managing meter readings
+    Displays all customers with their recent readings and billing info
+    """
+    from django.shortcuts import get_object_or_404
+    
+    # Get all clients
+    clients = Client.objects.select_related('user').all()
+    
+    # Get search/filter parameters
+    search_query = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    
+    if search_query:
+        clients = clients.filter(
+            Q(first_name__icontains=search_query) |
+            Q(last_name__icontains=search_query) |
+            Q(meter_number__icontains=search_query) |
+            Q(contact_number__icontains=search_query)
+        )
+    
+    if status_filter:
+        clients = clients.filter(status=status_filter)
+    
+    # Build client data with latest readings
+    client_data = []
+    for client in clients:
+        latest_bill = WaterBill.objects.filter(name=client).order_by('-billing_date').first()
+        
+        data = {
+            'client': client,
+            'meter_number': client.meter_number,
+            'name': f"{client.last_name}, {client.first_name}",
+            'status': client.status,
+            'latest_bill': latest_bill,
+            'previous_reading': latest_bill.previous_reading if latest_bill else None,
+            'current_reading': latest_bill.present_reading if latest_bill else None,
+            'consumption': latest_bill.meter_consumption if latest_bill else None,
+            'bill_amount': latest_bill.compute_bill() if latest_bill else None,
+            'month': latest_bill.billing_date.strftime('%B %Y') if latest_bill else 'N/A',
+            'payment_status': latest_bill.payment_status if latest_bill else 'N/A',
+        }
+        client_data.append(data)
+    
+    context = {
+        'title': 'Meter Readings Dashboard',
+        'client_data': client_data,
+        'search_query': search_query,
+        'status_filter': status_filter,
+        'form': BillForm(),
+    }
+    
+    return render(request, 'main/meter_readings_dashboard.html', context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def add_meter_reading(request, client_id):
+    """
+    Add a new meter reading for a specific customer
+    """
+    from django.shortcuts import get_object_or_404
+    
+    client = get_object_or_404(Client, id=client_id)
+    
+    if request.method == 'POST':
+        form = BillForm(request.POST)
+        if form.is_valid():
+            bill = form.save()
+            sweetify.success(request, f'Meter reading added for {client}')
+            return HttpResponseRedirect(reverse('meter_readings_dashboard'))
+        else:
+            sweetify.error(request, f'Error adding reading')
+            return HttpResponseRedirect(reverse('meter_readings_dashboard'))
+    else:
+        # Pre-fill customer and get last reading
+        last_bill = WaterBill.objects.filter(name=client).order_by('-billing_date').first()
+        initial_data = {
+            'name': client,
+            'previous_reading': last_bill.present_reading if last_bill else 0,
+            'payment_status': 'Pending',
+        }
+        form = BillForm(initial=initial_data)
+    
+    context = {
+        'title': f'Add Meter Reading - {client}',
+        'client': client,
+        'form': form,
+    }
+    
+    return render(request, 'main/add_meter_reading.html', context)
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def customer_reading_history(request, client_id):
+    """
+    View complete meter reading history for a customer
+    """
+    from django.shortcuts import get_object_or_404
+    
+    client = get_object_or_404(Client, id=client_id)
+    bills = WaterBill.objects.filter(name=client).order_by('-billing_date')
+    
+    context = {
+        'title': f'Reading History - {client}',
+        'client': client,
+        'bills': bills,
+    }
+    
+    return render(request, 'main/customer_reading_history.html', context)
+
+
+@login_required(login_url='login')
+@verified_or_superuser
+def customer_bills_view(request):
+    """
+    Customer-facing view to see their bills (read-only)
+    Shows all approved bills with download receipt option
+    """
+    try:
+        client = Client.objects.get(user=request.user)
+        # Get all approved bills for this customer (both paid and pending)
+        bills = WaterBill.objects.filter(
+            name=client, 
+            approval_status='Approved'
+        ).order_by('-billing_date')
+        
+        # Build bill data with calculations
+        bill_data = []
+        for bill in bills:
+            data = {
+                'id': bill.id,
+                'month': bill.billing_date.strftime('%B %Y') if bill.billing_date else 'N/A',
+                'billing_date': bill.billing_date,
+                'previous_reading': bill.previous_reading,
+                'present_reading': bill.present_reading,
+                'consumption': bill.meter_consumption,
+                'bill_amount': bill.compute_bill(),
+                'penalty': bill.penalty(),
+                'total': bill.payable(),
+                'payment_status': bill.payment_status,
+                'due_date': bill.duedate,
+                'penalty_date': bill.penaltydate,
+            }
+            bill_data.append(data)
+        
+    except Client.DoesNotExist:
+        client = None
+        bills = []
+        bill_data = []
+    
+    context = {
+        'title': 'My Bills',
+        'client': client,
+        'bills': bills,
+        'bill_data': bill_data,
+    }
+    return render(request, 'main/customer_bills.html', context)
