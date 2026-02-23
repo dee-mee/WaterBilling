@@ -10,6 +10,7 @@ services:
     runtime: python
     buildCommand: "./build.sh"
     startCommand: "gunicorn core.wsgi"
+    preDeployCommand: "python manage.py migrate && python manage.py seed_demo_users"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
