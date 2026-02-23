@@ -93,7 +93,13 @@ $ python3 manage.py runserver
 
 **7. Login Credentials**
 
-Create Super User (HOD)
+### Demo Credentials (for Testing on Render)
+
+See **DEMO_CREDENTIALS.md** for pre-configured test accounts:
+- Admin: `admin@example.com` / `12345678`
+- Customer: `user1@gmail.com` / `password`
+
+### Create Super User (HOD)
 Command for PC:
 ```
 $  python manage.py createsuperuser
