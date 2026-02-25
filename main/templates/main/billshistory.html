@@ -53,11 +53,18 @@
                             {% if request.user.is_superuser %}
                             <td> {{bill.approval_status}} </td>
                             {% endif %}
-                            <td><a href="{% url 'download_invoice' bill.id %}" class="btn btn-secondary"><i class="fa-solid fa-download"></i></a></td>
+                            <td>
+                                <div class="d-flex flex-wrap gap-2 justify-content-center">
+                                    <a href="{% url 'download_invoice' bill.id %}" class="btn btn-secondary btn-sm" title="Download"><i class="fa-solid fa-download"></i></a>
+                                    <button type="button" onclick="printBillReceipt({{ bill.id }})" class="btn btn-success btn-sm" title="Print"><i class="fa-solid fa-print"></i></button>
+                                </div>
+                            </td>
                             {% if request.user.is_superuser %}
                             <td class="text-center">  
-                                <a href="{% url 'billupdate' bill.id %}" class="btn btn-primary"><i class="fa-regular fa-pen-to-square"></i></a>
-                                <a href="{% url 'billdelete' bill.id %}" class="btn btn-danger"><i class="fa-solid fa-trash-can"></i></a>
+                                <div class="d-flex flex-wrap gap-2 justify-content-center">
+                                    <a href="{% url 'billupdate' bill.id %}" class="btn btn-primary btn-sm" title="Edit"><i class="fa-regular fa-pen-to-square"></i></a>
+                                    <a href="{% url 'billdelete' bill.id %}" class="btn btn-danger btn-sm" title="Delete"><i class="fa-solid fa-trash-can"></i></a>
+                                </div>
                             </td>
                             {% endif %}
                         </tr>   
@@ -70,4 +77,18 @@
 
 
 </div>
+
+<script>
+    function printBillReceipt(billId) {
+        if (!billId) {
+            alert('Bill ID not found');
+            return;
+        }
+        const printWindow = window.open(`/bills/${billId}/receipt/`, 'printWindow', 'height=600,width=800');
+        printWindow.onload = function() {
+            printWindow.print();
+        };
+    }
+</script>
+
 {% endblock %}

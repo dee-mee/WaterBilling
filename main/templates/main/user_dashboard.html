@@ -40,18 +40,19 @@
             Water Consumption History
         </div>
         <div class="card-body">
-            <table id="datatablesSimple">
-                <thead>
-                    <tr>
-                        <th>Billing Date</th>
-                        <th>Previous Reading</th>
-                        <th>Present Reading</th>
-                        <th>Consumption (Units)</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for bill in bills_qs %}
+            <div class="table-responsive">
+                <table id="datatablesSimple">
+                    <thead>
+                        <tr>
+                            <th>Billing Date</th>
+                            <th>Previous Reading</th>
+                            <th>Present Reading</th>
+                            <th>Consumption (Units)</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for bill in bills_qs %}
                     <tr>
                         <td>{{ bill.billing_date|date:"Y-m-d" }}</td>
                         <td>{{ bill.previous_reading }}</td>
@@ -66,6 +67,7 @@
                     {% endfor %}
                 </tbody>
             </table>
+            </div>
         </div>
     </div>
         <!-- Water Usage Graph -->
