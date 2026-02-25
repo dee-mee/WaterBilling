@@ -53,7 +53,8 @@
                             {% if request.user.is_superuser %}
                             <td> {{bill.approval_status}} </td>
                             {% endif %}
-                            <td><a href="{% url 'download_invoice' bill.id %}" class="btn btn-secondary"><i class="fa-solid fa-download"></i></a></td>
+                            <td><a href="{% url 'download_invoice' bill.id %}" class="btn btn-secondary"><i class="fa-solid fa-download"></i></a>
+                            <button type="button" onclick="printBill({{ bill.id }})" class="btn btn-info"><i class="fa-solid fa-print"></i></button></td>
                             {% if request.user.is_superuser %}
                             <td class="text-center">  
                                 <a href="{% url 'billupdate' bill.id %}" class="btn btn-primary"><i class="fa-regular fa-pen-to-square"></i></a>
@@ -70,4 +71,11 @@
 
 
 </div>
-{% endblock %}
+{% endblock %}<script>
+function printBill(billId) {
+    const printWindow = window.open(`/bills/${billId}/receipt/`, 'printWindow', 'height=600,width=800');
+    printWindow.onload = function() {
+        printWindow.print();
+    };
+}
+</script>

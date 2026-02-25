@@ -99,6 +99,11 @@
                                    title="Download Receipt">
                                     <i class="fa-solid fa-download"></i> Receipt
                                 </a>
+                                <button type="button" onclick="printBill({{ bill.id }})" 
+                                        class="btn btn-sm btn-info" 
+                                        title="Print Receipt">
+                                    <i class="fa-solid fa-print"></i> Print
+                                </button>
                             </td>
                         </tr>
                         {% empty %}
@@ -164,6 +169,13 @@
 </style>
 
 <script>
+    function printBill(billId) {
+        const printWindow = window.open(`/bills/${billId}/receipt/`, 'printWindow', 'height=600,width=800');
+        printWindow.onload = function() {
+            printWindow.print();
+        };
+    }
+
     $(document).ready(function() {
         $('#billsTable').DataTable({
             order: [[0, 'desc']],
