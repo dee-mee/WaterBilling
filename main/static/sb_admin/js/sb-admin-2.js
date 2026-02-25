@@ -16,10 +16,9 @@
       $('.sidebar .collapse').collapse('hide');
     };
     
-    // Toggle the side navigation when window is resized below 480px
-    if ($(window).width() < 480 && !$(".sidebar").hasClass("toggled")) {
-      $("body").addClass("sidebar-toggled");
-      $(".sidebar").addClass("toggled");
+    // Keep sidebar closed on small screens by default
+    if ($(window).width() < 480) {
+      // Just hide collapse items, don't toggle sidebar open
       $('.sidebar .collapse').collapse('hide');
     };
   });
