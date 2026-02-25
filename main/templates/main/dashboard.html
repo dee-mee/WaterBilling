@@ -145,7 +145,7 @@
                                 </td>
                                 <td>{{ user.created_at|date:"M d, Y" }}</td>
                                 <td class="text-center">
-                                    <a href="{% url 'update_user' user.id %}" class="btn btn-sm btn-primary" title="Edit User"><i class="fa-regular fa-pen-to-square"></i></a>
+                                    <a href="{% url 'updateuser' user.id %}" class="btn btn-sm btn-primary" title="Edit User"><i class="fa-regular fa-pen-to-square"></i></a>
                                 </td>
                             </tr>
                             {% empty %}
