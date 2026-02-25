@@ -53,23 +53,11 @@
                             <td> {{bill.payment_status}}</td>
                             <td class="text-center">
                                 <div class="d-flex flex-wrap gap-2 justify-content-center">
-                                    <a href="{% url 'download_invoice' bill.id %}" class="btn btn-secondary btn-sm" title="Download"><i class="fa-solid fa-download"></i></a>
-                                    <button type="button" onclick="printBillReceipt({{ bill.id }})" class="btn btn-success btn-sm" title="Print"><i class="fa-solid fa-print"></i></button>
+                                    <button type="button" onclick="printBillReceipt({{ bill.id }})" class="btn btn-success btn-sm" title="Print Receipt"><i class="fa-solid fa-print"></i></button>
                                     {% if request.user.is_superuser %}
-                                        <form method="POST" action="" class="d-inline">
-                                            {% csrf_token %}
-                                            <input name="contact_number" type="text" value="{{bill.name.contact_number}}" hidden>
-                                            <input name="total_bill" type="text" value="{{bill.payable}}" hidden>
-                                            <input name="due_date" type="text" value="{{bill.duedate}}" hidden>   
-                                            <input name="penalty_date" type="text" value="{{bill.penaltydate}}" hidden>
-                                            <button name="notify" class="btn btn-primary btn-sm" type="submit" title="Notify"> 
-                                                <i class="fa-solid fa-envelope"></i>
-                                            </button>
-                                        </form>
                                         <a href="{% url 'billupdate' bill.id %}" class="btn btn-primary btn-sm" title="Edit"><i class="fa-regular fa-pen-to-square"></i></a>
-                                        <a href="{% url 'billdelete' bill.id %}" class="btn btn-danger btn-sm" title="Delete"><i class="fa-solid fa-trash-can"></i></a>
                                     {% else %}
-                                        <a href="{% url 'create_checkout_session' bill.id %}" class="btn btn-success btn-sm">Pay Now</a>
+                                        <a href="{% url 'create_checkout_session' bill.id %}" class="btn btn-primary btn-sm" title="Pay Now">Pay Now</a>
                                     {% endif %}
                                 </div>
                             </td>
