@@ -1,0 +1,276 @@
+{% extends 'main/layout.html' %}
+{% load static %}
+
+{% block body %}
+<div class="container mt-4">
+    <!-- Header with back button -->
+    <div class="mb-4">
+        <a href="{% url 'users_all' %}" class="btn btn-secondary btn-sm"><i class="fa-solid fa-arrow-left"></i> Back to Users</a>
+    </div>
+
+    <!-- Main Profile Card -->
+    <div class="card shadow mb-4">
+        <div class="card-header bg-primary py-4">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h3 class="m-0 font-weight-bold text-white">
+                        <i class="fa-solid fa-user-circle me-2"></i>User Profile
+                    </h3>
+                </div>
+                <div class="col-auto">
+                    <a href="{% url 'updateuser' user.id %}" class="btn btn-light btn-sm" title="Edit User">
+                        <i class="fa-solid fa-pen-to-square"></i> Edit
+                    </a>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <!-- Personal Information Section -->
+                <div class="col-lg-6 mb-4">
+                    <div class="border-left-primary pl-3">
+                        <h6 class="font-weight-bold text-primary mb-3">
+                            <i class="fa-solid fa-address-card me-2"></i>Personal Information
+                        </h6>
+                        <div class="mb-3">
+                            <label class="font-weight-bold text-muted">Full Name:</label>
+                            <p class="mb-0 h6">{{ user.get_full_name|default:"Not Set" }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="font-weight-bold text-muted">First Name:</label>
+                            <p class="mb-0 h6">{{ user.first_name|default:"Not Set" }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="font-weight-bold text-muted">Last Name:</label>
+                            <p class="mb-0 h6">{{ user.last_name|default:"Not Set" }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="font-weight-bold text-muted">Email Address:</label>
+                            <p class="mb-0 h6">
+                                <a href="mailto:{{ user.email }}">{{ user.email }}</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Account Status Section -->
+                <div class="col-lg-6 mb-4">
+                    <div class="border-left-success pl-3">
+                        <h6 class="font-weight-bold text-success mb-3">
+                            <i class="fa-solid fa-shield-check me-2"></i>Account Status
+                        </h6>
+                        <div class="mb-3">
+                            <label class="font-weight-bold text-muted">Approval Status:</label>
+                            <p class="mb-0">
+                                {% if user.admin_approved %}
+                                    <span class="badge badge-success py-2 px-3">
+                                        <i class="fa-solid fa-check"></i> Approved
+                                    </span>
+                                {% elif user.rejected %}
+                                    <span class="badge badge-danger py-2 px-3">
+                                        <i class="fa-solid fa-ban"></i> Rejected
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-warning py-2 px-3">
+                                        <i class="fa-solid fa-hourglass-half"></i> Pending
+                                    </span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="font-weight-bold text-muted">Email Verification:</label>
+                            <p class="mb-0">
+                                {% if user.verified %}
+                                    <span class="badge badge-success py-2 px-3">
+                                        <i class="fa-solid fa-check-circle"></i> Verified
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-secondary py-2 px-3">
+                                        <i class="fa-solid fa-circle-xmark"></i> Not Verified
+                                    </span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="font-weight-bold text-muted">Account Active:</label>
+                            <p class="mb-0">
+                                {% if user.is_active %}
+                                    <span class="badge badge-success py-2 px-3">
+                                        <i class="fa-solid fa-check"></i> Active
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-danger py-2 px-3">
+                                        <i class="fa-solid fa-ban"></i> Inactive
+                                    </span>
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="font-weight-bold text-muted">Account Type:</label>
+                            <p class="mb-0">
+                                {% if user.is_superuser %}
+                                    <span class="badge badge-info py-2 px-3">Admin</span>
+                                {% else %}
+                                    <span class="badge badge-primary py-2 px-3">Customer</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- Dates Section -->
+            <div class="row">
+                <div class="col-lg-6 mb-4">
+                    <div class="border-left-info pl-3">
+                        <h6 class="font-weight-bold text-info mb-3">
+                            <i class="fa-solid fa-calendar-check me-2"></i>Timeline
+                        </h6>
+                        <div class="mb-3">
+                            <label class="font-weight-bold text-muted">Account Created:</label>
+                            <p class="mb-0 h6">{{ user.created_at|date:"F d, Y - H:i" }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="font-weight-bold text-muted">Last Updated:</label>
+                            <p class="mb-0 h6">{{ user.updated_at|date:"F d, Y - H:i" }}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="font-weight-bold text-muted">Last Login:</label>
+                            <p class="mb-0 h6">
+                                {% if user.last_login %}
+                                    {{ user.last_login|date:"F d, Y - H:i" }}
+                                {% else %}
+                                    Never
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Rejection Reason (if applicable) -->
+                {% if user.rejected and user.rejection_reason %}
+                <div class="col-lg-6 mb-4">
+                    <div class="border-left-danger pl-3">
+                        <h6 class="font-weight-bold text-danger mb-3">
+                            <i class="fa-solid fa-circle-exclamation me-2"></i>Rejection Reason
+                        </h6>
+                        <p class="mb-0">{{ user.rejection_reason }}</p>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Client Information (if associated) -->
+            {% if client %}
+            <hr class="my-4">
+            <div class="row">
+                <div class="col-12">
+                    <div class="border-left-warning pl-3">
+                        <h6 class="font-weight-bold text-warning mb-3">
+                            <i class="fa-solid fa-faucet me-2"></i>Water Service Account
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="font-weight-bold text-muted">Meter Number:</label>
+                                    <p class="mb-0 h6">{{ client.meter_number|default:"N/A" }}</p>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="font-weight-bold text-muted">Connection Status:</label>
+                                    <p class="mb-0">
+                                        {% if client.status == 'Connected' %}
+                                            <span class="badge badge-success py-2 px-3">
+                                                <i class="fa-solid fa-check"></i> Connected
+                                            </span>
+                                        {% else %}
+                                            <span class="badge badge-danger py-2 px-3">
+                                                <i class="fa-solid fa-ban"></i> Disconnected
+                                            </span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="font-weight-bold text-muted">Contact Number:</label>
+                                    <p class="mb-0 h6">
+                                        {% if client.contact_number %}
+                                            <a href="tel:{{ client.contact_number }}">{{ client.contact_number }}</a>
+                                        {% else %}
+                                            Not Set
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="font-weight-bold text-muted">Location:</label>
+                                    <p class="mb-0 h6">{{ client.location|default:"Not Set" }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'updateuser' user.id %}" class="btn btn-primary">
+                    <i class="fa-solid fa-pen-to-square me-2"></i>Edit User
+                </a>
+                {% if not user.admin_approved %}
+                    <form method="POST" action="{% url 'approve_user' user.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-success" onclick="return confirm('Approve this user?');">
+                            <i class="fa-solid fa-check me-2"></i>Approve
+                        </button>
+                    </form>
+                {% endif %}
+                {% if not user.rejected %}
+                    <form method="POST" action="{% url 'reject_user' user.id %}" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-warning" onclick="return confirm('Reject this user?');">
+                            <i class="fa-solid fa-ban me-2"></i>Reject
+                        </button>
+                    </form>
+                {% endif %}
+                <a href="{% url 'deleteuser' user.id %}" class="btn btn-danger">
+                    <i class="fa-solid fa-trash-can me-2"></i>Delete
+                </a>
+                <a href="{% url 'users_all' %}" class="btn btn-secondary">
+                    <i class="fa-solid fa-arrow-left me-2"></i>Back
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .border-left-primary {
+        border-left: 4px solid #007bff;
+    }
+    .border-left-success {
+        border-left: 4px solid #28a745;
+    }
+    .border-left-info {
+        border-left: 4px solid #17a2b8;
+    }
+    .border-left-warning {
+        border-left: 4px solid #ffc107;
+    }
+    .border-left-danger {
+        border-left: 4px solid #dc3545;
+    }
+    .pl-3 {
+        padding-left: 1rem;
+    }
+    .badge {
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}

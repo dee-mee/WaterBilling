@@ -454,6 +454,24 @@ def update_user(request, pk):
     return render(request, 'main/userupdate.html', context)
 
 @user_passes_test(lambda u: u.is_superuser)
+def view_user_profile(request, pk):
+    """View user profile in read-only mode (for admins)"""
+    user = Account.objects.get(id=pk)
+    
+    # Get associated client if exists
+    try:
+        client = Client.objects.get(user=user)
+    except Client.DoesNotExist:
+        client = None
+    
+    context = {
+        'title': f'Profile - {user.get_full_name()}',
+        'user': user,
+        'client': client,
+    }
+    return render(request, 'main/view_user_profile.html', context)
+
+@user_passes_test(lambda u: u.is_superuser)
 def delete_user(request, pk):
     user = Account.objects.get(id=pk)
     context = {

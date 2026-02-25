@@ -27,6 +27,7 @@ urlpatterns = [
     path('users/approved/', views.users_approved, name="users_approved"),
     path('users/active/', views.users_active, name="users_active"),
     path('users/inactive/', views.users_inactive, name="users_inactive"),
+    path('user/view/<str:pk>', views.view_user_profile, name="view_user_profile"),
     path('user/update/<str:pk>', views.update_user, name="updateuser"),
     path('user/delete/<str:pk>', views.delete_user, name="deleteuser"),
     path('user/approve/<str:pk>', views.approve_user, name="approve_user"),

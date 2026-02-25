@@ -1,60 +1,143 @@
 {% extends 'main/layout.html' %}
 
-
 {% block body %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Profile Header -->
+            <div class="card shadow mb-4">
+                <div class="card-header bg-primary py-4">
+                    <h3 class="m-0 font-weight-bold text-white">
+                        <i class="fa-solid fa-user-circle me-2"></i>My Profile
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <!-- Profile Information Display -->
+                    <div class="mb-4 pb-4 border-bottom">
+                        <h6 class="font-weight-bold text-primary mb-3">
+                            <i class="fa-solid fa-address-card me-2"></i>Personal Information
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="font-weight-bold text-muted small">Email:</label>
+                                <p class="h6 mb-0">{{ profile.email }}</p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="font-weight-bold text-muted small">Full Name:</label>
+                                <p class="h6 mb-0">{{ profile.last_name }}, {{ profile.first_name|default:"Not Set" }}</p>
+                            </div>
+                        </div>
+                    </div>
 
-<div class="container"> 
-    <div class="card p-5"> 
-        <h1 class="h3 mb-2 text-primary font-weight-bolder text-center mb-3"> Profile </h1>
-        <hr>
-    <form action="" method="POST" class="user mt-5">
-        {% csrf_token %}
-        <div class="form-group row">
-            <div class="col-sm-6 mb-3 mb-sm-0">
-            <label> Email: </label>   
-            {{ profile.email }}
-            </div>
-            <div class="col-sm-6 mb-3 mb-sm-0">
-                <label> Fullname: </label>   
-                {{ profile.last_name }}, {{ profile.first_name }}
-            </div>
-        </div>
-    <div class="form-group row">
-        <div class="col-sm-6 mb-3 mb-sm-0">
-            <div class="input-group">
-                {{ student_form.password }}
-                <div class="input-group-append">
-                    <button class="btn btn-outline-secondary js-password-toggle" type="button" aria-label="Show password">
-                        <i class="fa-solid fa-eye"></i>
-                    </button>
+                    <!-- Account Status -->
+                    <div class="mb-4 pb-4 border-bottom">
+                        <h6 class="font-weight-bold text-success mb-3">
+                            <i class="fa-solid fa-shield-check me-2"></i>Account Status
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="font-weight-bold text-muted small">Verification Status:</label>
+                                <p class="mb-0">
+                                    {% if profile.verified %}
+                                        <span class="badge badge-success py-2 px-3">
+                                            <i class="fa-solid fa-check-circle"></i> Email Verified
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-warning py-2 px-3">
+                                            <i class="fa-solid fa-exclamation-circle"></i> Pending Verification
+                                        </span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="font-weight-bold text-muted small">Admin Approval:</label>
+                                <p class="mb-0">
+                                    {% if profile.admin_approved %}
+                                        <span class="badge badge-success py-2 px-3">
+                                            <i class="fa-solid fa-check"></i> Approved
+                                        </span>
+                                    {% elif profile.rejected %}
+                                        <span class="badge badge-danger py-2 px-3">
+                                            <i class="fa-solid fa-ban"></i> Rejected
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-info py-2 px-3">
+                                            <i class="fa-solid fa-hourglass-half"></i> Pending Review
+                                        </span>
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Update Password Section -->
+                    <form action="" method="POST" class="user">
+                        {% csrf_token %}
+                        <h6 class="font-weight-bold text-primary mb-3">
+                            <i class="fa-solid fa-lock me-2"></i>Update Password
+                        </h6>
+                        <div class="alert alert-info small mb-3">
+                            <i class="fa-solid fa-info-circle me-2"></i>
+                            Password must be at least 8 characters long and cannot be entirely numeric.
+                        </div>
+
+                        <div class="form-group row">
+                            <div class="col-sm-6 mb-3 mb-sm-0">
+                                <label for="id_password" class="font-weight-bold text-muted small">New Password:</label>
+                                <div class="input-group">
+                                    {{ student_form.password }}
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-secondary js-password-toggle" type="button" aria-label="Show password">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                {% if student_form.password.help_text %}
+                                    <small class="form-text text-muted mt-2 d-block">
+                                        {{ student_form.password.help_text|safe }}
+                                    </small>
+                                {% endif %}
+                            </div>
+                            <div class="col-sm-6">
+                                <label for="password2" class="font-weight-bold text-muted small">Confirm Password:</label>
+                                <div class="input-group">
+                                    <input type="password" name="password2" id="password2" class="form-control form-control-user" placeholder="Confirm Password" required>
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-secondary js-password-toggle" type="button" aria-label="Show password">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex flex-wrap gap-2 justify-content-center">
+                            <button type="submit" class="btn btn-primary px-5">
+                                <i class="fa-solid fa-save me-2"></i>Save Changes
+                            </button>
+                            <a href="/" class="btn btn-secondary px-5">
+                                <i class="fa-solid fa-xmark me-2"></i>Cancel
+                            </a>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
-        <div class="col-sm-6">
-            <div class="input-group">
-                <input type="password" name="password2" class="form-control form-control-user" placeholder="Confirm Password">
-                <div class="input-group-append">
-                    <button class="btn btn-outline-secondary js-password-toggle" type="button" aria-label="Show password">
-                        <i class="fa-solid fa-eye"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    <div class="help" id="id_password1_helptext">
-        <ul style="font-size: 13px;">
-            <li>Password can’t be too similar to other personal information.</li>
-            <li>Password must contain at least 8 characters.</li>
-            <li>Password can’t be a commonly used password.</li>
-            <li>Password can’t be entirely numeric.</li>
-        </ul>
-    </div>
-    <hr>
-    <div class="d-flex justify-content-center">
-    <input type="submit" value="Save" class="btn btn-primary btn-user  w-25">
-    <a href="{{request.META.HTTP_REFERER}}" class="ml-3 btn btn-secondary btn-user  w-25">Cancel</a>
-    </div>
-    </form>
     </div>
 </div>
+
+<style>
+    .form-control-user {
+        font-size: 0.95rem;
+    }
+    .badge {
+        font-size: 0.85rem;
+    }
+    .border-bottom {
+        border-bottom: 1px solid #e3e6f0 !important;
+    }
+</style>
 {% endblock %}
