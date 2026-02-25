@@ -53,7 +53,6 @@
                             <td> {{bill.payment_status}}</td>
                             <td class="text-center">
                                 <a href="{% url 'download_invoice' bill.id %}" class="btn btn-secondary btn-sm mx-1"><i class="fa-solid fa-download"></i></a>
-                                <button type="button" onclick="printBill({{ bill.id }})" class="btn btn-info btn-sm mx-1"><i class="fa-solid fa-print"></i></button>
                                 {% if request.user.is_superuser %}
                                     <form method="POST" action="" class="d-inline">
                                         {% csrf_token %}
@@ -165,12 +164,5 @@ document.addEventListener('DOMContentLoaded', function() {
         presReading.addEventListener('input', calculateConsumption);
     }
 });
-
-function printBill(billId) {
-    const printWindow = window.open(`/bills/${billId}/receipt/`, 'printWindow', 'height=600,width=800');
-    printWindow.onload = function() {
-        printWindow.print();
-    };
-}
 </script>
 {% endblock %}

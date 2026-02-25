@@ -109,8 +109,19 @@ def download_invoice(request, pk):
         metric = Metric.objects.first()
         rate = metric.consump_amount if metric else 200.0
         
-        # Calculate period (e.g., month of billing_date)
-        period = bill.billing_date.strftime('%B %Y') if bill.billing_date else "N/A"
+        # Calculate period (from billing_date to due_date or next month)
+        if bill.billing_date:
+            period_start = bill.billing_date.strftime('%d %b')
+            # Period end is next day or due date - 1 day
+            if bill.duedate:
+                from dateutil.relativedelta import relativedelta
+                period_end_date = bill.duedate - datetime.timedelta(days=1)
+            else:
+                period_end_date = bill.billing_date + datetime.timedelta(days=27)  # ~monthly
+            period_end = period_end_date.strftime('%d %b %Y')
+            period = f"{period_start} - {period_end}"
+        else:
+            period = "N/A"
         
         # Due date
         due_date = bill.duedate.strftime('%d %b %Y') if bill.duedate else "N/A"
@@ -121,9 +132,10 @@ def download_invoice(request, pk):
         # Amount due
         amount_due = bill.payable() if hasattr(bill, 'payable') else (consumption * rate)
         
-        # Next reading date - let's assume it's one month after billing date
+        # Next reading date - exactly one month after billing date
         if bill.billing_date:
-            next_reading = bill.billing_date + datetime.timedelta(days=30)
+            from dateutil.relativedelta import relativedelta
+            next_reading = bill.billing_date + relativedelta(months=1)
             next_reading_date = next_reading.strftime('%d %b %Y')
         else:
             next_reading_date = "N/A"
