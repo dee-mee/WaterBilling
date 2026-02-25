@@ -43,8 +43,11 @@
 
     <!-- Bills Table -->
     <div class="card shadow mb-4">
-        <div class="card-header py-3">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
             <h6 class="m-0 font-weight-bold text-primary">Billing History</h6>
+            <button type="button" class="btn btn-success btn-sm" onclick="printAllBills()" title="Print all bills">
+                <i class="fa-solid fa-print me-2"></i>Print Bills
+            </button>
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -188,6 +191,51 @@
         printWindow.onload = function() {
             printWindow.print();
         };
+    }
+
+    function printAllBills() {
+        const bills = document.querySelectorAll('#billsTable tbody tr');
+        if (bills.length === 0) {
+            alert('No bills to print');
+            return;
+        }
+        
+        // Get all bill IDs from the print buttons
+        const billIds = [];
+        bills.forEach(row => {
+            const printBtn = row.querySelector('button[onclick*="printBillReceipt"]');
+            if (printBtn) {
+                const onclickAttr = printBtn.getAttribute('onclick');
+                const match = onclickAttr.match(/printBillReceipt\((\d+)\)/);
+                if (match) {
+                    billIds.push(match[1]);
+                }
+            }
+        });
+
+        if (billIds.length === 0) {
+            alert('No bills found to print');
+            return;
+        }
+
+        // Open bills sequentially
+        let index = 0;
+        const printNext = () => {
+            if (index < billIds.length) {
+                const billId = billIds[index];
+                const printWindow = window.open(`/bills/${billId}/receipt/`, `printWindow${index}`, 'height=600,width=800');
+                printWindow.onload = function() {
+                    printWindow.print();
+                    // Trigger next bill after a small delay
+                    setTimeout(() => {
+                        index++;
+                        printNext();
+                    }, 1000);
+                };
+            }
+        };
+        
+        printNext();
     }
 </script>
 
