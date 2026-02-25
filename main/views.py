@@ -181,6 +181,7 @@ def dashboard(request):
         'ongoingbills': WaterBill.objects.filter(payment_status='Pending'),
         'connected_clients': Client.objects.filter(status='Connected').count(),
         'disconnected_clients': Client.objects.filter(status='Disconnected').count(),
+        'recent_users': Account.objects.filter(is_superuser=False).order_by('-created_at')[:10],
     }
     return render(request, 'main/dashboard.html', context)
 

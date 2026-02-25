@@ -104,6 +104,62 @@
         <!-- END ROW-->
 
 
+        <!-- Users Table -->
+        <div class="col-sm-12 card shadow mt-5" data-aos="fade-up" data-aos-duration="1000" data-aos-easing="ease-in-out">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary text-center">Recent Users</h6>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered tally-table" id="usersTable" width="100%" cellspacing="0">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Status</th>
+                                <th>Verified</th>
+                                <th>Joined</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in recent_users %}
+                            <tr>
+                                <td>{{ user.get_full_name }}</td>
+                                <td>{{ user.email }}</td>
+                                <td>
+                                    {% if user.admin_approved %}
+                                        <span class="badge badge-success">Approved</span>
+                                    {% elif user.rejected %}
+                                        <span class="badge badge-danger">Rejected</span>
+                                    {% else %}
+                                        <span class="badge badge-warning">Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user.verified %}
+                                        <span class="badge badge-success">✓ Verified</span>
+                                    {% else %}
+                                        <span class="badge badge-secondary">✗ Not Verified</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.created_at|date:"M d, Y" }}</td>
+                                <td class="text-center">
+                                    <a href="{% url 'update_user' user.id %}" class="btn btn-sm btn-primary" title="Edit User"><i class="fa-regular fa-pen-to-square"></i></a>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">No users yet</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Ongoing Bills Table -->
         <div class="col-sm-12 card shadow mt-5" data-aos="fade-up" data-aos-duration="1000" data-aos-easing="ease-in-out">
             <div class="card-header py-3">
                 <h6 class="m-0 font-weight-bold text-primary text-center">Ongoing Bills</h6>
