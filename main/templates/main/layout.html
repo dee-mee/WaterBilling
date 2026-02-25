@@ -450,10 +450,15 @@
             },
             buttons: [
                 {
-                    extend: 'pdf',
-                    text: 'PDF',
-                    className: 'ml-2 btn btn-secondary',
-                    titleAttr: 'PDF',
+                    text: 'Print',
+                    className: 'btn btn-success',
+                    titleAttr: 'Print Receipt',
+                    action: function(e, dt, node, config) {
+                        const billId = dt.rows().data()[0]?.DOMStringMap?.billId || getBillIdFromTable(dt);
+                        if (billId) {
+                            printBillReceipt(billId);
+                        }
+                    }
                 },
             ]
                     });
@@ -475,10 +480,15 @@
             dom: 'Bfrtipl',
             buttons: [
                 {
-                    extend: 'pdf',
-                    text: 'PDF',
-                    className: 'ml-2 btn btn-secondary',
-                    titleAttr: 'PDF',
+                    text: 'Print',
+                    className: 'btn btn-success',
+                    titleAttr: 'Print Receipt',
+                    action: function(e, dt, node, config) {
+                        const billId = dt.rows().data()[0]?.DOMStringMap?.billId || getBillIdFromTable(dt);
+                        if (billId) {
+                            printBillReceipt(billId);
+                        }
+                    }
                 },
             ]
         });
@@ -539,6 +549,33 @@
             s[1] += new Array(prec - s[1].length + 1).join('0');
           }
           return s.join(dec);
+        }
+
+        // Print bill receipt in professional format
+        function printBillReceipt(billId) {
+            if (!billId) {
+                alert('Bill ID not found');
+                return;
+            }
+            const printWindow = window.open(`/bills/${billId}/receipt/`, 'printWindow', 'height=600,width=800');
+            printWindow.onload = function() {
+                printWindow.print();
+            };
+        }
+
+        // Get bill ID from table (fallback method)
+        function getBillIdFromTable(dt) {
+            const rows = dt.rows().nodes();
+            if (rows.length > 0) {
+                const firstRow = rows[0];
+                const downloadBtn = firstRow.querySelector('a[href*="/receipt/"]');
+                if (downloadBtn) {
+                    const href = downloadBtn.getAttribute('href');
+                    const match = href.match(/\/bills\/(\d+)\//);
+                    if (match) return match[1];
+                }
+            }
+            return null;
         }
 
         // Chart initialization moved to individual pages
