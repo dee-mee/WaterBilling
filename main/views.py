@@ -105,9 +105,12 @@ def download_invoice(request, pk):
                         {'message': 'An error occurred while retrieving the bill.', 'error': str(e)}, 
                         status=500)
 
-        # Get rate from Metric model
+        # Get rate from Metric model - ensure we get a valid rate
         metric = Metric.objects.first()
-        rate = metric.consump_amount if metric else 200.0
+        if metric and metric.consump_amount and metric.consump_amount > 0:
+            rate = metric.consump_amount
+        else:
+            rate = 200.0  # Default rate if no valid metric found
         
         # Calculate period (from billing_date to due_date or next month)
         if bill.billing_date:
