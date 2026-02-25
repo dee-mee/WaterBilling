@@ -3,9 +3,6 @@ from django.shortcuts import render, redirect, HttpResponseRedirect, HttpRespons
 from django.urls import reverse
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.conf import settings
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.units import inch
-from reportlab.pdfgen import canvas
 from django.core.exceptions import ObjectDoesNotExist
 from .models import *
 from account.models import *
@@ -19,11 +16,9 @@ from twilio.rest import Client as TwilClient
 import csv
 from django.http import HttpResponse, JsonResponse
 import json
-from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.units import inch
 from django.conf import settings
 import stripe
+import weasyprint
 from account.forms import RegistrationForm
 from django.template.loader import render_to_string
 
@@ -109,102 +104,52 @@ def download_invoice(request, pk):
             return render(request, 'main/error.html', 
                         {'message': 'An error occurred while retrieving the bill.', 'error': str(e)}, 
                         status=500)
+
+        # Get rate from Metric model
+        metric = Metric.objects.first()
+        rate = metric.consump_amount if metric else 200.0
         
-        # Create the HttpResponse object with the appropriate PDF headers
-        response = HttpResponse(content_type='application/pdf')
+        # Calculate period (e.g., month of billing_date)
+        period = bill.billing_date.strftime('%B %Y') if bill.billing_date else "N/A"
+        
+        # Due date
+        due_date = bill.duedate.strftime('%d %b %Y') if bill.duedate else "N/A"
+        
+        # Consumption
+        consumption = bill.meter_consumption if bill.meter_consumption is not None else 0
+        
+        # Amount due
+        amount_due = bill.payable() if hasattr(bill, 'payable') else (consumption * rate)
+        
+        # Next reading date - let's assume it's one month after billing date
+        if bill.billing_date:
+            next_reading = bill.billing_date + datetime.timedelta(days=30)
+            next_reading_date = next_reading.strftime('%d %b %Y')
+        else:
+            next_reading_date = "N/A"
+
+        context = {
+            "company_name":     "Timaji Water Services",
+            "tagline":          "Pure Water, Pure Life",
+            "customer_name":    f"{bill.name.first_name} {bill.name.last_name}",
+            "period":           period,
+            "due_date":         due_date,
+            "previous_reading": f"{bill.previous_reading or 0:04d}",
+            "current_reading":  f"{bill.present_reading or 0:04d}",
+            "consumption":      consumption,
+            "rate":             f"{rate:,.0f}",
+            "amount_due":       f"{amount_due:,.2f}",
+            "mpesa_number":     "+254 728 984188",
+            "next_reading_date": next_reading_date,
+            "email":            "info@timajiwater.co.ke",
+            "phone":            "+254 721 974819",
+        }
+        
+        html_string = render_to_string("main/receipt_template.html", context)
+        pdf_bytes = weasyprint.HTML(string=html_string).write_pdf()
+        
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="invoice_{bill.id}.pdf"'
-
-        # Create the PDF object, using the response object as its "file."
-        p = canvas.Canvas(response, pagesize=letter)
-        width, height = letter
-
-        # Add logo if it exists
-        logo_path = os.path.join(settings.BASE_DIR, 'main/static/sb_admin/img/logo.jpg')
-        if os.path.exists(logo_path):
-            try:
-                p.drawImage(logo_path, inch, height - 1.5 * inch, width=1*inch, height=1*inch)
-            except Exception as e:
-                print(f"Error adding logo to PDF: {str(e)}")
-                # Continue without the logo if there's an error
-
-        # Set font and draw the header
-        p.setFont("Helvetica-Bold", 16)
-        p.drawString(2 * inch, height - inch, "Water Billing System")
-
-        # ---------- Customer Information (Table) ----------
-        p.setFont("Helvetica-Bold", 13)
-        y_position = height - 2 * inch
-        p.drawString(inch, y_position, "Customer Information")
-
-        # Table layout
-        p.setFont("Helvetica", 11)
-        y_position -= 0.3 * inch
-        row_height = 0.3 * inch
-        label_col_width = 2.5 * inch
-        value_col_width = 3.5 * inch
-        table_left_x = inch
-
-        customer_rows = [
-            ("Customer Name", f"{bill.name.first_name} {bill.name.last_name}"),
-            ("Meter Number", bill.name.meter_number or "N/A"),
-            ("Address", bill.name.address or "N/A"),
-        ]
-
-        for idx, (label, value) in enumerate(customer_rows):
-            row_y_top = y_position - idx * row_height
-            row_y_bottom = row_y_top - row_height
-
-            # Draw cells
-            p.rect(table_left_x, row_y_bottom, label_col_width, row_height, stroke=1, fill=0)
-            p.rect(table_left_x + label_col_width, row_y_bottom, value_col_width, row_height, stroke=1, fill=0)
-
-            # Draw text
-            p.drawString(table_left_x + 0.1 * inch, row_y_bottom + 0.1 * inch, str(label))
-            p.drawString(table_left_x + label_col_width + 0.1 * inch, row_y_bottom + 0.1 * inch, str(value))
-
-        # Move position below customer table
-        y_position = y_position - len(customer_rows) * row_height - 0.5 * inch
-
-        # ---------- Bill Details (Table) ----------
-        p.setFont("Helvetica-Bold", 13)
-        p.drawString(inch, y_position, "Bill Details")
-
-        p.setFont("Helvetica", 11)
-        y_position -= 0.3 * inch
-
-        billing_period = bill.billing_date.strftime('%B %Y') if bill.billing_date else "N/A"
-        due_date = bill.duedate.strftime('%Y-%m-%d') if bill.duedate else "N/A"
-
-        bill_rows = [
-            ("Billing Period", billing_period),
-            ("Due Date", due_date),
-            ("Previous Reading", bill.previous_reading or "N/A"),
-            ("Present Reading", bill.present_reading or "N/A"),
-            ("Water Consumption (m³)", bill.meter_consumption or "N/A"),
-            ("Total Bill", bill.payable() if hasattr(bill, "payable") else "N/A"),
-            ("Payment Status", bill.payment_status or "N/A"),
-        ]
-
-        for idx, (label, value) in enumerate(bill_rows):
-            row_y_top = y_position - idx * row_height
-            row_y_bottom = row_y_top - row_height
-
-            # Draw cells
-            p.rect(table_left_x, row_y_bottom, label_col_width, row_height, stroke=1, fill=0)
-            p.rect(table_left_x + label_col_width, row_y_bottom, value_col_width, row_height, stroke=1, fill=0)
-
-            # Draw text
-            p.drawString(table_left_x + 0.1 * inch, row_y_bottom + 0.1 * inch, str(label))
-            p.drawString(table_left_x + label_col_width + 0.1 * inch, row_y_bottom + 0.1 * inch, str(value))
-
-        # Add a footer
-        p.setFont("Helvetica", 8)
-        p.drawString(inch, 0.5 * inch, f"Generated on: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}")
-
-        # Close the PDF object cleanly, and we're done.
-        p.showPage()
-        p.save()
-
         return response
 
     except Exception as e:

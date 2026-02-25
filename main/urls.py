@@ -18,6 +18,7 @@ urlpatterns = [
     path('bill/update/<str:pk>', views.update_bills, name="billupdate"),
     path('bill/delete/<str:pk>', views.delete_bills, name="billdelete"),
     path('bill/invoice/<str:pk>', views.download_invoice, name="download_invoice"),
+    path('bills/<int:pk>/receipt/', views.download_invoice, name="download_invoice_alias"),
 
     path('users', views.users, name="users"),
     path('users/all/', views.users_all, name="users_all"),
