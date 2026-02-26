@@ -22,7 +22,8 @@ PyJWT==2.11.0
 pyparsing==3.1.2
 pytz==2024.1
 qrcode==7.4.2
-weasyprint==60.1
+pydyf<0.10
+weasyprint==57.0
 requests==2.32.3
 six==1.16.0
 sqlparse==0.5.0

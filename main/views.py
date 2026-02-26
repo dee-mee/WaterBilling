@@ -161,7 +161,17 @@ def download_invoice(request, pk):
         }
         
         html_string = render_to_string("main/receipt_template.html", context)
-        pdf_bytes = weasyprint.HTML(string=html_string).write_pdf()
+        try:
+            pdf_bytes = weasyprint.HTML(string=html_string).write_pdf()
+        except TypeError as e:
+            # Handle version compatibility issues
+            if "PDF.__init__()" in str(e):
+                # Try alternative approach
+                from weasyprint import HTML, CSS
+                doc = HTML(string=html_string)
+                pdf_bytes = doc.write_pdf()
+            else:
+                raise
         
         response = HttpResponse(pdf_bytes, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="invoice_{bill.id}.pdf"'
