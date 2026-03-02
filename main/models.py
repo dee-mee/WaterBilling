@@ -55,6 +55,9 @@ class WaterBill(models.Model):
                     penalty_amount=100.0
                 )
             consump_amount = metric.consump_amount
+            # Ensure rate is at least 200 (treat 1 as legacy invalid value)
+            if not consump_amount or consump_amount <= 1:
+                consump_amount = 200.0
             return self.meter_consumption * consump_amount if self.meter_consumption else 0
         except Exception as e:
             # Fallback in case of any error
