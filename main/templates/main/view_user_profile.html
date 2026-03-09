@@ -108,7 +108,7 @@
                         <div class="mb-3">
                             <label class="font-weight-bold text-muted">Account Type:</label>
                             <p class="mb-0">
-                                {% if user.is_superuser %}
+                                {% if user.is_superuser or user.is_staff %}
                                     <span class="badge badge-info py-2 px-3">Admin</span>
                                 {% else %}
                                     <span class="badge badge-primary py-2 px-3">Customer</span>

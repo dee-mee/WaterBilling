@@ -2,6 +2,7 @@ from functools import wraps
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
+from django.contrib.auth.decorators import login_required
 from main.models import *
 import sweetify
 
@@ -10,8 +11,8 @@ def verified_or_superuser(function):
   @wraps(function)
   def wrap(request, *args, **kwargs):
         profile = request.user
-        # Superusers are always allowed
-        if profile.is_superuser:
+        # Superusers and staff are always allowed
+        if profile.is_superuser or profile.is_staff:
              return function(request, *args, **kwargs)
         # Check if user is verified (OTP) and approved by admin
         if profile.verified and profile.admin_approved:
@@ -29,6 +30,18 @@ def verified_or_superuser(function):
             return HttpResponseRedirect(reverse('login'))
 
   return wrap
+
+
+def staff_required(function):
+    @wraps(function)
+    @login_required(login_url='login')
+    def wrap(request, *args, **kwargs):
+        if request.user.is_staff or request.user.is_superuser:
+            return function(request, *args, **kwargs)
+        else:
+            sweetify.error(request, 'You do not have permission to access this page.')
+            return HttpResponseRedirect(reverse('ongoingbills'))
+    return wrap
 
 
 

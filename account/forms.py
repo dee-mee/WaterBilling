@@ -121,7 +121,8 @@ class UpdateUserForm(FormSettings):
          instance = kwargs.get('instance').__dict__
          self.fields['password'].required = False
          for field in UpdateUserForm.Meta.fields:
-            self.fields[field].initial = instance.get(field)
+            if field in self.fields:
+               self.fields[field].initial = instance.get(field)
          if self.instance.pk is not None:
             self.fields['password'].widget.attrs['placeholder'] = "Fill this only if you wish to update password"
          else:
@@ -131,10 +132,6 @@ class UpdateUserForm(FormSettings):
    def clean_email(self, *args, **kwargs):
       formEmail = self.cleaned_data['email'].lower()
 
-      domain = formEmail.split('@')[1]
-      domain_list = ["ssct.edu.ph"]
-      if domain not in domain_list:
-         raise forms.ValidationError("Please enter ssct gsuite email")
       if self.instance.pk is None: 
          if Account.objects.filter(email=formEmail).exists():
                raise forms.ValidationError(
@@ -158,13 +155,14 @@ class UpdateUserForm(FormSettings):
 
    class Meta:
       model = Account
-      exclude = ['verified',]
-      fields = ['last_name', 'first_name', 'email', 'password']
+      exclude = ['verified', 'is_superuser']
+      fields = ['last_name', 'first_name', 'email', 'password', 'is_staff']
       widgets = {
       'last_name':forms.TextInput(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'Last name' }),
       'first_name':forms.TextInput(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'First Name' }),
       'email': forms.TextInput(attrs={'type': 'email', 'class': 'form-control', 'placeholder':'Email' }),
       'password': forms.PasswordInput(attrs={'type': 'password', 'class': 'form-control', 'placeholder':'Password' }),
+      'is_staff': forms.CheckboxInput(attrs={'class': 'form-check-input ml-2'}),
    }
 
 

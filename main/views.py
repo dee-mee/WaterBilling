@@ -29,7 +29,7 @@ def landingpage(request):
     return render(request, 'landingpage/landingpage.html')  
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def export_clients_csv(request):
     response = HttpResponse(content_type='text/csv')
     response['Content-Disposition'] = 'attachment; filename="clients.csv"'
@@ -44,7 +44,7 @@ def export_clients_csv(request):
     return response
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def export_meter_readings_csv(request):
     """Export all meter readings with quote dates to CSV"""
     response = HttpResponse(content_type='text/csv')
@@ -185,7 +185,7 @@ def download_invoice(request, pk):
                     status=500)
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def dashboard(request):
     context = {
         'title': 'Dashboard',
@@ -202,7 +202,7 @@ def dashboard(request):
 @login_required(login_url='login')
 @verified_or_superuser
 def ongoing_bills(request):
-    if request.user.is_superuser:
+    if request.user.is_superuser or request.user.is_staff:
         ongoingbills = WaterBill.objects.filter(payment_status='Pending')
     else:
         ongoingbills = WaterBill.objects.filter(payment_status='Pending', approval_status='Approved', name__user=request.user)
@@ -244,7 +244,7 @@ def ongoing_bills(request):
 @login_required(login_url='login')
 @verified_or_superuser
 def history_bills(request):
-    if request.user.is_superuser:
+    if request.user.is_superuser or request.user.is_staff:
         billshistory = WaterBill.objects.filter(payment_status__in=['Paid', 'Pending'])
     else:
         billshistory = WaterBill.objects.filter(payment_status__in=['Paid', 'Pending'], approval_status='Approved', name__user=request.user)
@@ -254,7 +254,7 @@ def history_bills(request):
     }
     return render(request, 'main/billshistory.html', context)
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def update_bills(request, pk):
     bill = WaterBill.objects.get(id=pk)
     form = BillForm(instance=bill)
@@ -319,7 +319,7 @@ def profile(request, pk):
     }
     return render(request, 'main/profile.html', context)
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def users_all(request):
     users_list = Account.objects.filter(is_superuser=False)
     search_query = request.GET.get('search', '')
@@ -340,7 +340,7 @@ def users_all(request):
     return render(request, 'main/users.html', context)
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def users_pending(request):
     users_list = Account.objects.filter(is_superuser=False, admin_approved=False)
     search_query = request.GET.get('search', '')
@@ -361,7 +361,7 @@ def users_pending(request):
     return render(request, 'main/users.html', context)
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def users_rejected(request):
     users_list = Account.objects.filter(is_superuser=False, admin_approved=False, is_active=False)
     search_query = request.GET.get('search', '')
@@ -382,7 +382,7 @@ def users_rejected(request):
     return render(request, 'main/users.html', context)
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def users_approved(request):
     users_list = Account.objects.filter(is_superuser=False, admin_approved=True)
     search_query = request.GET.get('search', '')
@@ -403,7 +403,7 @@ def users_approved(request):
     return render(request, 'main/users.html', context)
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def users_active(request):
     users_list = Account.objects.filter(is_superuser=False, is_active=True)
     search_query = request.GET.get('search', '')
@@ -424,7 +424,7 @@ def users_active(request):
     return render(request, 'main/users.html', context)
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def users_inactive(request):
     users_list = Account.objects.filter(is_superuser=False, is_active=False)
     search_query = request.GET.get('search', '')
@@ -446,11 +446,11 @@ def users_inactive(request):
 
 
 # Keep the old 'users' view for backward compatibility, redirect to users_all
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def users(request):
     return redirect('users_all')
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def update_user(request, pk):
     user = Account.objects.get(id=pk)
     form = UpdateUserForm(instance=user)
@@ -467,7 +467,7 @@ def update_user(request, pk):
             return HttpResponseRedirect(reverse('users'))
     return render(request, 'main/userupdate.html', context)
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def view_user_profile(request, pk):
     """View user profile in read-only mode (for admins)"""
     user = Account.objects.get(id=pk)
@@ -498,7 +498,7 @@ def delete_user(request, pk):
         return HttpResponseRedirect(reverse('users'))
     return render(request, 'main/userdelete.html', context)
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def approve_user(request, pk):
     user = Account.objects.get(id=pk)
     if request.method == 'POST':
@@ -511,7 +511,7 @@ def approve_user(request, pk):
     return redirect('users_pending')
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def reject_user(request, pk):
     user = Account.objects.get(id=pk)
     if request.method == 'POST':
@@ -584,7 +584,7 @@ Water Billing System Administration
     return redirect('users_pending')
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def add_user(request):
     form = RegistrationForm()
     context = {
@@ -601,7 +601,7 @@ def add_user(request):
             sweetify.toast(request, 'Invalid details', icon='error')
     return render(request, 'main/useradd.html', context)
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def clients(request):
     form = ClientForm()
     context = {
@@ -623,7 +623,7 @@ def clients(request):
             sweetify.toast(request, 'Invalid details', icon='error')
     return render(request, 'main/clients.html', context)
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def client_update(request,pk):
     client = Client.objects.get(id=pk)
     form = ClientForm(instance=client)
@@ -653,6 +653,7 @@ def client_delete(request,pk):
 
 
 
+@staff_required
 def metrics(request):
     clients = Client.objects.all()
     search_query = request.GET.get('search', '')
@@ -688,7 +689,7 @@ def metrics(request):
     return render(request, 'main/metrics.html', context)
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def metrics_active(request):
     clients = Client.objects.filter(status='Connected')
     search_query = request.GET.get('search', '')
@@ -721,7 +722,7 @@ def metrics_active(request):
     return render(request, 'main/metrics.html', context)
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def metrics_inactive(request):
     clients = Client.objects.filter(status__in=['Disconnected', 'Pending'])
     search_query = request.GET.get('search', '')
@@ -898,7 +899,7 @@ def metrics_update(request, pk):
     return render(request, 'main/metricsupdate.html', context)
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def add_customer(request):
     if request.method == 'POST':
         form = CustomerForm(request.POST)
@@ -926,7 +927,7 @@ def add_customer(request):
     return render(request, 'main/customer_form_partial.html', {'form': form})
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def edit_customer(request, pk):
     try:
         client = Client.objects.get(id=pk)
@@ -964,7 +965,7 @@ def edit_customer(request, pk):
 
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def bulk_upload_view(request):
     if request.method == 'POST':
         form = BulkUploadForm(request.POST, request.FILES)
@@ -1127,7 +1128,7 @@ def bulk_upload_users_view(request):
     return render(request, 'main/bulk_upload_users.html', {'form': form, 'title': 'Bulk Upload Users'})
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def send_reminders_view(request):
     if request.method == 'POST':
         ongoing_bills = WaterBill.objects.filter(payment_status='Pending')
@@ -1151,7 +1152,7 @@ def send_reminders_view(request):
     return render(request, 'main/send_reminders.html')
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def approve_bills_view(request):
     bills = WaterBill.objects.filter(approval_status='Pending Approval')
     context = {
@@ -1160,7 +1161,7 @@ def approve_bills_view(request):
     }
     return render(request, 'main/approve_bills.html', context)
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def bill_approve(request, pk):
     bill = WaterBill.objects.get(id=pk)
     bill.approval_status = 'Approved'
@@ -1168,7 +1169,7 @@ def bill_approve(request, pk):
     sweetify.toast(request, 'Bill approved successfully')
     return HttpResponseRedirect(reverse('approve_bills'))
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def bill_reject(request, pk):
     bill = WaterBill.objects.get(id=pk)
     bill.approval_status = 'Rejected'
@@ -1180,12 +1181,12 @@ def bill_reject(request, pk):
 
 @login_required(login_url='login')
 def usage_analytics_view(request):
-    if request.user.is_superuser:
+    if request.user.is_superuser or request.user.is_staff:
         bills = WaterBill.objects.exclude(billing_date__isnull=True).order_by('billing_date')
     else:
         bills = WaterBill.objects.filter(name__user=request.user).exclude(billing_date__isnull=True).order_by('billing_date')
 
-    if request.user.is_superuser:
+    if request.user.is_superuser or request.user.is_staff:
         bills = WaterBill.objects.exclude(billing_date__isnull=True).order_by('billing_date')
     else:
         bills = WaterBill.objects.filter(name__user=request.user).exclude(billing_date__isnull=True).order_by('billing_date')
@@ -1399,7 +1400,7 @@ def contact_support(request):
     return redirect('user_support')
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def support_tickets(request):
     """Admin view for managing support tickets"""
     status_filter = request.GET.get('status', '')
@@ -1423,7 +1424,7 @@ def support_tickets(request):
     return render(request, 'main/support_tickets.html', context)
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def update_ticket(request, pk):
     """Admin view to update support ticket status and add response"""
     ticket = SupportTicket.objects.get(id=pk)
@@ -1446,7 +1447,7 @@ def update_ticket(request, pk):
     return redirect('support_tickets')
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def meter_readings_dashboard(request):
     """
     Admin dashboard for viewing and managing meter readings
@@ -1504,7 +1505,7 @@ def meter_readings_dashboard(request):
     return render(request, 'main/meter_readings_dashboard.html', context)
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def add_meter_reading(request, client_id):
     """
     Add a new meter reading for a specific customer
@@ -1541,7 +1542,7 @@ def add_meter_reading(request, client_id):
     return render(request, 'main/add_meter_reading.html', context)
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@staff_required
 def customer_reading_history(request, client_id):
     """
     View complete meter reading history for a customer

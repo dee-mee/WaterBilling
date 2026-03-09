@@ -2,7 +2,7 @@
 {% load static %}
 {% block body %}
 <div class="container-fluid">
-    {% if request.user.is_superuser %}
+    {% if request.user.is_superuser or request.user.is_staff %}
     <div class="d-flex"> 
         <h1 class="h3 mb-2 text-primary font-weight-bolder">Clients</h1><br>
         <a class="ml-auto btn btn-primary mb-3" data-toggle="modal" data-target="#Addmodal">Add Client</a>
@@ -30,7 +30,7 @@
                             <th>Address</th>
                             <th>Connection Status</th>
 
-                            {% if request.user.is_superuser %}
+                            {% if request.user.is_superuser or request.user.is_staff %}
                             <th>Action</th> 
                             {% endif %}
                         </tr>
@@ -43,7 +43,7 @@
                             <th> {{ client.contact_number}} </th>
                             <th> {{ client.address }} </th>
                             <th> {{client.status}} </th>
-                            {% if request.user.is_superuser %}
+                            {% if request.user.is_superuser or request.user.is_staff %}
                             <td class="text-center">  
                                 <a href="{% url 'clientupdate' client.id %}" class="btn btn-primary"><i class="fa-regular fa-pen-to-square"></i></a>
                                 <a href="{% url 'clientdelete' client.id %}" class="btn btn-danger"><i class="fa-solid fa-trash-can"></i></a>
@@ -57,7 +57,7 @@
         </div>
     </div>
 
-{% if request.user.is_superuser %}
+{% if request.user.is_superuser or request.user.is_staff %}
 
 <div class="modal fade" id="Addmodal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
     <div class="modal-dialog" role="document">

@@ -27,11 +27,11 @@
                             <th>Penalty</th>
                             <th>Payable Amount</th>
                             <th>Payment Status</th>
-                            {% if request.user.is_superuser %}
+                            {% if request.user.is_superuser or request.user.is_staff %}
                             <th>Approval Status</th>
                             {% endif %}
                             <th>Action</th>
-                            {% if request.user.is_superuser %}
+                            {% if request.user.is_superuser or request.user.is_staff %}
                             <th>Action</th> 
                             {% endif %}
                         </tr>
@@ -50,7 +50,7 @@
                             <td> {{bill.penalty}}</td> 
                             <td class="font-weight-bolder text-primary"> KSh {{bill.payable}} </td> 
                             <td> {{bill.payment_status}}</td>
-                            {% if request.user.is_superuser %}
+                            {% if request.user.is_superuser or request.user.is_staff %}
                             <td> {{bill.approval_status}} </td>
                             {% endif %}
                             <td>
@@ -59,7 +59,7 @@
                                     <button type="button" onclick="printBillReceipt({{ bill.id }})" class="btn btn-success btn-sm" title="Print"><i class="fa-solid fa-print"></i></button>
                                 </div>
                             </td>
-                            {% if request.user.is_superuser %}
+                            {% if request.user.is_superuser or request.user.is_staff %}
                             <td class="text-center">  
                                 <div class="d-flex flex-wrap gap-2 justify-content-center">
                                     <a href="{% url 'billupdate' bill.id %}" class="btn btn-primary btn-sm" title="Edit"><i class="fa-regular fa-pen-to-square"></i></a>
