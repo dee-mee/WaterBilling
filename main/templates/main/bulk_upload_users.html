@@ -1,0 +1,70 @@
+{% extends 'main/layout.html' %}
+{% block body %}
+<div class="container-fluid">
+    <div class="d-sm-flex align-items-center justify-content-between mb-4">
+        <h1 class="h3 mb-0 text-gray-800">{{ title }}</h1>
+        <a href="{{ request.META.HTTP_REFERER|default:'/users' }}" class="d-none d-sm-inline-block btn btn-sm btn-secondary shadow-sm">
+            <i class="fas fa-arrow-left fa-sm text-white-50"></i> Back
+        </a>
+    </div>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Upload Users File (Excel or CSV)</h6>
+        </div>
+        <div class="card-body">
+            <p>Please upload an <strong>Excel (.xlsx, .xls)</strong> or <strong>CSV</strong> file with the following columns:</p>
+            <ul>
+                <li><strong>First Name</strong></li>
+                <li><strong>Last Name</strong></li>
+                <li><strong>Email</strong></li>
+                <li><strong>Contact Number</strong></li>
+                <li><strong>Address</strong></li>
+            </ul>
+            <p class="text-info small"><i class="fas fa-info-circle"></i> Note: Users will be created with default password <strong>Welcome123</strong> and will be automatically approved and verified.</p>
+            
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="csv_file">Select File:</label>
+                    <input type="file" name="csv_file" class="form-control-file" id="csv_file" accept=".csv, .xlsx, .xls" required>
+                </div>
+                <hr>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-upload fa-sm text-white-50 mr-1"></i> Start Upload
+                </button>
+            </form>
+        </div>
+    </div>
+    
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-secondary text-center">Sample Format</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered" width="100%" cellspacing="0">
+                    <thead class="bg-light">
+                        <tr>
+                            <th>First Name</th>
+                            <th>Last Name</th>
+                            <th>Email</th>
+                            <th>Contact Number</th>
+                            <th>Address</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>John</td>
+                            <td>Smith</td>
+                            <td>john.smith@gmail.com</td>
+                            <td>+254712345678</td>
+                            <td>123 Main Street, Nairobi</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

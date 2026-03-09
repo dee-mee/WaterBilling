@@ -14,6 +14,7 @@ from main.decorators import *
 import datetime
 from twilio.rest import Client as TwilClient
 import csv
+import openpyxl
 from django.http import HttpResponse, JsonResponse
 import json
 from django.conf import settings
@@ -968,29 +969,162 @@ def bulk_upload_view(request):
     if request.method == 'POST':
         form = BulkUploadForm(request.POST, request.FILES)
         if form.is_valid():
-            csv_file = request.FILES['csv_file']
-            decoded_file = csv_file.read().decode('utf-8').splitlines()
-            reader = csv.DictReader(decoded_file)
-            for row in reader:
-                try:
-                    client = Client.objects.get(meter_number=row['meter_number'])
-                    WaterBill.objects.create(
-                        client=client,
-                        billing_date=row['billing_date'],
-                        previous_reading=row['previous_reading'],
-                        present_reading=row['present_reading'],
-                        due_date=row['due_date'],
-                        penalty_date=row['penalty_date'],
-                    )
-                except Client.DoesNotExist:
-                    sweetify.toast(request, f"Client with meter number {row['meter_number']} does not exist.", icon='error')
-                except Exception as e:
-                    sweetify.toast(request, f"An error occurred: {e}", icon='error')
-            sweetify.toast(request, 'Bulk upload successful.')
-            return HttpResponseRedirect(reverse('ongoingbills'))
+            uploaded_file = request.FILES['csv_file']
+            filename = uploaded_file.name.lower()
+            
+            try:
+                readings_data = []
+                
+                if filename.endswith('.csv'):
+                    decoded_file = uploaded_file.read().decode('utf-8').splitlines()
+                    reader = csv.DictReader(decoded_file)
+                    for row in reader:
+                        readings_data.append(row)
+                
+                elif filename.endswith('.xlsx') or filename.endswith('.xls'):
+                    wb = openpyxl.load_workbook(uploaded_file, data_only=True)
+                    sheet = wb.active
+                    headers = [cell.value for cell in sheet[1]]
+                    header_map = {header.strip(): i for i, header in enumerate(headers) if header}
+                    
+                    for row_idx in range(2, sheet.max_row + 1):
+                        row_vals = [cell.value for cell in sheet[row_idx]]
+                        if not any(row_vals): continue
+                        
+                        readings_data.append({
+                            'meter_number': row_vals[header_map.get('meter_number')] if 'meter_number' in header_map else None,
+                            'billing_date': row_vals[header_map.get('billing_date')] if 'billing_date' in header_map else None,
+                            'previous_reading': row_vals[header_map.get('previous_reading')] if 'previous_reading' in header_map else None,
+                            'present_reading': row_vals[header_map.get('present_reading')] if 'present_reading' in header_map else None,
+                            'due_date': row_vals[header_map.get('due_date')] if 'due_date' in header_map else None,
+                            'penalty_date': row_vals[header_map.get('penalty_date')] if 'penalty_date' in header_map else None,
+                        })
+                else:
+                    sweetify.error(request, 'Unsupported file format. Please upload CSV or Excel file.')
+                    return redirect('bulk_upload')
+
+                count = 0
+                for row in readings_data:
+                    try:
+                        if not row.get('meter_number'): continue
+                        
+                        client = Client.objects.get(meter_number=row['meter_number'])
+                        WaterBill.objects.create(
+                            name=client,
+                            billing_date=row['billing_date'],
+                            previous_reading=row['previous_reading'],
+                            present_reading=row['present_reading'],
+                            duedate=row.get('due_date'),
+                            penaltydate=row.get('penalty_date'),
+                            payment_status='Pending'
+                        )
+                        count += 1
+                    except Client.DoesNotExist:
+                        logger.warning(f"Client with meter number {row.get('meter_number')} does not exist.")
+                    except Exception as e:
+                        logger.error(f"Error processing row: {e}")
+
+                sweetify.success(request, f'Successfully uploaded {count} meter readings.')
+                return HttpResponseRedirect(reverse('ongoingbills'))
+            except Exception as e:
+                sweetify.error(request, f"An error occurred: {e}")
+                return redirect('bulk_upload')
     else:
         form = BulkUploadForm()
     return render(request, 'main/bulk_upload.html', {'form': form})
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def bulk_upload_users_view(request):
+    if request.method == 'POST':
+        form = BulkUploadForm(request.POST, request.FILES)
+        if form.is_valid():
+            uploaded_file = request.FILES['csv_file']
+            filename = uploaded_file.name.lower()
+            
+            try:
+                users_data = []
+                
+                if filename.endswith('.csv'):
+                    decoded_file = uploaded_file.read().decode('utf-8').splitlines()
+                    reader = csv.DictReader(decoded_file)
+                    for row in reader:
+                        users_data.append({
+                            'first_name': row.get('First Name'),
+                            'last_name': row.get('Last Name'),
+                            'email': row.get('Email'),
+                            'contact_number': row.get('Contact Number'),
+                            'address': row.get('Address')
+                        })
+                
+                elif filename.endswith('.xlsx') or filename.endswith('.xls'):
+                    wb = openpyxl.load_workbook(uploaded_file, data_only=True)
+                    sheet = wb.active
+                    
+                    # Get headers from first row
+                    headers = [cell.value for cell in sheet[1]]
+                    
+                    # Map header names to indices
+                    header_map = {}
+                    for i, header in enumerate(headers):
+                        if header:
+                            header_map[header.strip()] = i
+                    
+                    # Parse data rows
+                    for row_idx in range(2, sheet.max_row + 1):
+                        row = [cell.value for cell in sheet[row_idx]]
+                        if not any(row): continue # Skip empty rows
+                        
+                        users_data.append({
+                            'first_name': row[header_map.get('First Name')] if 'First Name' in header_map else None,
+                            'last_name': row[header_map.get('Last Name')] if 'Last Name' in header_map else None,
+                            'email': row[header_map.get('Email')] if 'Email' in header_map else None,
+                            'contact_number': row[header_map.get('Contact Number')] if 'Contact Number' in header_map else None,
+                            'address': row[header_map.get('Address')] if 'Address' in header_map else None
+                        })
+                
+                else:
+                    sweetify.error(request, 'Unsupported file format. Please upload CSV or Excel file.')
+                    return redirect('bulk_upload_users')
+
+                count = 0
+                for data in users_data:
+                    email = data.get('email')
+                    if not email:
+                        continue
+                        
+                    if Account.objects.filter(email=email).exists():
+                        continue
+                        
+                    # Create Account
+                    user = Account.objects.create_user(
+                        email=email,
+                        password='Welcome123', # Default password
+                        first_name=data.get('first_name'),
+                        last_name=data.get('last_name'),
+                        admin_approved=True,
+                        verified=True
+                    )
+                    
+                    # Create Client
+                    Client.objects.create(
+                        user=user,
+                        first_name=data.get('first_name'),
+                        last_name=data.get('last_name'),
+                        contact_number=data.get('contact_number'),
+                        address=data.get('address'),
+                        status='Connected'
+                    )
+                    count += 1
+                
+                sweetify.success(request, f'Successfully uploaded {count} users.')
+                return redirect('users_all')
+            except Exception as e:
+                sweetify.error(request, f'An error occurred: {str(e)}')
+                return redirect('bulk_upload_users')
+    else:
+        form = BulkUploadForm()
+    return render(request, 'main/bulk_upload_users.html', {'form': form, 'title': 'Bulk Upload Users'})
 
 
 @user_passes_test(lambda u: u.is_superuser)

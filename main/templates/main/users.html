@@ -4,7 +4,12 @@
 <div class="container-fluid">
     <div class="d-flex"> 
         <h1 class="h3 mb-2 text-primary font-weight-bolder">{{ title|default:"Users" }}</h1><br>
-        <a class="ml-auto btn btn-primary mb-3" href="{% url 'adduser' %}">Add User</a> 
+        <div class="ml-auto mb-3">
+            <a class="btn btn-secondary mr-2" href="{% url 'bulk_upload_users' %}">
+                <i class="fas fa-file-csv mr-1"></i> Bulk Upload
+            </a>
+            <a class="btn btn-primary" href="{% url 'adduser' %}">Add User</a> 
+        </div>
     </div>
 
     <!-- Search Bar -->

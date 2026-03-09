@@ -44,6 +44,7 @@ urlpatterns = [
     path('customer/add/', views.add_customer, name="add_customer"),
     path('customer/edit/<int:pk>', views.edit_customer, name="edit_customer"),
     path('bulk-upload/', views.bulk_upload_view, name='bulk_upload'),
+    path('users/bulk-upload/', views.bulk_upload_users_view, name='bulk_upload_users'),
     path('send-reminders/', views.send_reminders_view, name='send_reminders'),
     path('approve-bills/', views.approve_bills_view, name='approve_bills'),
     path('bill-approve/<int:pk>', views.bill_approve, name='bill_approve'),
