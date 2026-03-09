@@ -390,7 +390,9 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="{% static 'sweetify/sweetify.js' %}"></script>
     {% load sweetify %}
+    {% if request %}
     {% sweetify %}
+    {% endif %}
 
     <!-- Datatables -->
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
