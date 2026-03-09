@@ -52,7 +52,7 @@ def login_view(request):
                     return HttpResponseRedirect(reverse('ongoingbills'))
                 elif user.is_superuser:
                     if not Metric.objects.all():
-                        Metric.objects.create(consump_amount=1,penalty_amount=1)
+                        Metric.objects.create(consump_amount=200,penalty_amount=1)
                     sweetify.success(request, 'Login Successfully')
                     return HttpResponseRedirect(reverse('dashboard'))
                 elif not user.verified:
