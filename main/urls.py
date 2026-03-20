@@ -12,6 +12,8 @@ urlpatterns = [
 
     path('export-clients-csv/', views.export_clients_csv, name='export_clients_csv'),
     path('export-meter-readings-csv/', views.export_meter_readings_csv, name='export_meter_readings_csv'),
+    path('export-ongoing-bills-excel/', views.export_ongoing_bills_excel, name='export_ongoing_bills_excel'),
+    path('export-recent-users-excel/', views.export_recent_users_excel, name='export_recent_users_excel'),
 
     path('bills/ongoing', views.ongoing_bills, name="ongoingbills"),
     path('bills/history', views.history_bills, name="billshistory"),
@@ -28,6 +30,7 @@ urlpatterns = [
     path('users/active/', views.users_active, name="users_active"),
     path('users/inactive/', views.users_inactive, name="users_inactive"),
     path('user/view/<int:pk>', views.view_user_profile, name="view_user_profile"),
+    path('user/print/<int:pk>', views.print_user_profile, name="print_user_profile"),
     path('user/update/<int:pk>', views.update_user, name="updateuser"),
     path('user/delete/<int:pk>', views.delete_user, name="deleteuser"),
     path('user/approve/<int:pk>', views.approve_user, name="approve_user"),

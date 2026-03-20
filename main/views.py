@@ -81,6 +81,167 @@ def export_meter_readings_csv(request):
 
     return response
 
+@staff_required
+def export_ongoing_bills_excel(request):
+    """Export ongoing bills to Excel format"""
+    from io import BytesIO
+    
+    # Get ongoing bills
+    bills = WaterBill.objects.filter(payment_status='Pending').select_related('name').order_by('-billing_date')
+    
+    # Create a new workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Ongoing Bills"
+    
+    # Add headers
+    headers = ['Name', 'Bill Amount (KES)', 'Meter Consumption (cu.m)', 'Due Date', 
+               'Penalty Date', 'Penalty (KES)', 'Payable Amount (KES)', 'Payment Status']
+    ws.append(headers)
+    
+    # Style header row
+    from openpyxl.styles import Font, PatternFill, Alignment
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="007BFF", end_color="007BFF", fill_type="solid")
+    
+    for cell in ws[1]:
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+    
+    # Add data rows
+    for bill in bills:
+        ws.append([
+            str(bill.name),
+            bill.compute_bill() or 0,
+            bill.meter_consumption or 0,
+            bill.duedate.strftime('%d-%m-%Y') if bill.duedate else 'N/A',
+            bill.penaltydate.strftime('%d-%m-%Y') if bill.penaltydate else 'N/A',
+            bill.penalty() or 0,
+            bill.payable() or 0,
+            bill.payment_status or 'N/A'
+        ])
+    
+    # Adjust column widths
+    column_widths = [25, 18, 22, 15, 15, 15, 18, 18]
+    for i, width in enumerate(column_widths, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
+    
+    # Center align numeric columns
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=2, max_col=2):
+        for cell in row:
+            cell.alignment = Alignment(horizontal="right")
+    
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=3, max_col=3):
+        for cell in row:
+            cell.alignment = Alignment(horizontal="right")
+    
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=6, max_col=7):
+        for cell in row:
+            cell.alignment = Alignment(horizontal="right")
+    
+    # Save to BytesIO
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    # Return as download
+    response = HttpResponse(
+        output.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="ongoing_bills.xlsx"'
+    
+    return response
+
+@staff_required
+def export_recent_users_excel(request):
+    """Export recent users to Excel format"""
+    from io import BytesIO
+    
+    # Get recent users (same as dashboard)
+    recent_users = Account.objects.all().order_by('-created_at')[:10]
+    
+    # Create a new workbook
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Recent Users"
+    
+    # Add headers
+    headers = ['Name', 'Email', 'Status', 'Verified', 'Joined', 'Account Type', 'Active']
+    ws.append(headers)
+    
+    # Style header row
+    from openpyxl.styles import Font, PatternFill, Alignment
+    header_font = Font(bold=True, color="FFFFFF")
+    header_fill = PatternFill(start_color="007BFF", end_color="007BFF", fill_type="solid")
+    
+    for cell in ws[1]:
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+    
+    # Add data rows
+    for user in recent_users:
+        # Determine approval status
+        if user.admin_approved:
+            status = 'Approved'
+        elif user.rejected:
+            status = 'Rejected'
+        else:
+            status = 'Pending'
+        
+        # Determine verification status
+        verified = 'Yes' if user.verified else 'No'
+        
+        # Determine account type
+        account_type = 'Admin' if (user.is_superuser or user.is_staff) else 'Customer'
+        
+        # Determine if active
+        is_active = 'Yes' if user.is_active else 'No'
+        
+        ws.append([
+            user.get_full_name(),
+            user.email,
+            status,
+            verified,
+            user.created_at.strftime('%d-%m-%Y') if user.created_at else 'N/A',
+            account_type,
+            is_active
+        ])
+    
+    # Adjust column widths
+    column_widths = [25, 30, 15, 12, 15, 15, 12]
+    for i, width in enumerate(column_widths, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = width
+    
+    # Center align certain columns
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=3, max_col=3):
+        for cell in row:
+            cell.alignment = Alignment(horizontal="center")
+    
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=4, max_col=4):
+        for cell in row:
+            cell.alignment = Alignment(horizontal="center")
+    
+    for row in ws.iter_rows(min_row=2, max_row=ws.max_row, min_col=6, max_col=7):
+        for cell in row:
+            cell.alignment = Alignment(horizontal="center")
+    
+    # Save to BytesIO
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    # Return as download
+    response = HttpResponse(
+        output.getvalue(),
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="recent_users.xlsx"'
+    
+    return response
+
 from django.shortcuts import get_object_or_404
 import logging
 from django.utils import timezone
@@ -484,6 +645,26 @@ def view_user_profile(request, pk):
         'client': client,
     }
     return render(request, 'main/view_user_profile.html', context)
+
+@staff_required
+def print_user_profile(request, pk):
+    """Print user profile as a formatted printable document"""
+    user = Account.objects.get(id=pk)
+    
+    # Get associated client if exists
+    try:
+        client = Client.objects.get(user=user)
+    except Client.DoesNotExist:
+        client = None
+    
+    from django.utils import timezone
+    context = {
+        'title': f'Print Profile - {user.get_full_name()}',
+        'user': user,
+        'client': client,
+        'current_date': timezone.now().strftime('%d %B %Y at %H:%M'),
+    }
+    return render(request, 'main/user_profile_print.html', context)
 
 @user_passes_test(lambda u: u.is_superuser)
 def delete_user(request, pk):
