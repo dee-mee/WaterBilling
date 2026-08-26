@@ -20,6 +20,12 @@
         <label for="{{ form.meter_number.id_for_label }}">Meter Number:</label>
         {{ form.meter_number }}
     </div>
+
+    <div class="form-group">
+        <label for="{{ form.account_number.id_for_label }}">Paybill account number:</label>
+        {{ form.account_number }}
+        <small class="form-text text-muted">Leave blank to auto-assign. Customers enter this as the M-Pesa account number.</small>
+    </div>
     
     <div class="form-group">
         <label for="{{ form.contact_number.id_for_label }}">Contact Number:</label>

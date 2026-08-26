@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'main',
     'account',
+    'payments',
     'sweetify',
     'corsheaders',
     'bootstrap_modal_forms',
@@ -47,6 +48,23 @@ INSTALLED_APPS = [
 
 STRIPE_PUBLISHABLE_KEY = os.environ.get('STRIPE_PUBLISHABLE_KEY')
 STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
+
+MPESA_CONSUMER_KEY = os.environ.get('MPESA_CONSUMER_KEY', '')
+MPESA_CONSUMER_SECRET = os.environ.get('MPESA_CONSUMER_SECRET', '')
+MPESA_SHORTCODE = os.environ.get('MPESA_SHORTCODE', '')
+MPESA_PASSKEY = os.environ.get('MPESA_PASSKEY', '')
+MPESA_ENV = os.environ.get('MPESA_ENV', 'sandbox')
+MPESA_CALLBACK_BASE_URL = os.environ.get('MPESA_CALLBACK_BASE_URL', '').rstrip('/')
+MPESA_CALLBACK_SECRET = os.environ.get('MPESA_CALLBACK_SECRET', '')
+MPESA_ALLOWED_IPS = [
+    ip.strip()
+    for ip in os.environ.get('MPESA_ALLOWED_IPS', '').split(',')
+    if ip.strip()
+]
+
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', CELERY_BROKER_URL)
+CELERY_TASK_ALWAYS_EAGER = os.environ.get('CELERY_TASK_ALWAYS_EAGER', 'False') == 'True'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -82,11 +100,24 @@ WSGI_APPLICATION = 'core.wsgi.application'
 
 
 DATABASE_URL = os.environ.get('DATABASE_URL')
+DB_NAME = os.environ.get('DB_NAME')
 
 if DATABASE_URL:
     # Use DATABASE_URL if provided (e.g. production on Render/Neon)
     DATABASES = {
         'default': dj_database_url.config(conn_max_age=600)
+    }
+elif DB_NAME:
+    # Fallback to discrete PostgreSQL environment variables (common in cPanel deployments)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': DB_NAME,
+            'USER': os.environ.get('DB_USER', ''),
+            'PASSWORD': os.environ.get('DB_PASSWORD', ''),
+            'HOST': os.environ.get('DB_HOST', 'localhost'),
+            'PORT': os.environ.get('DB_PORT', '5432'),
+        }
     }
 else:
     # Safe default for local development: SQLite

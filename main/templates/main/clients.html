@@ -24,6 +24,7 @@
                 <table class="table table-bordered tally-table" id="dataTable" width="100%" cellspacing="0">
                     <thead>
                         <tr>
+                            <th>Account No.</th>
                             <th>Meter Number</th>
                             <th>Full Name</th>
                             <th>Contact Number</th>
@@ -38,6 +39,7 @@
                     <tbody>
                        {% for client in clients %}
                         <tr>
+                            <th> {{ client.account_number }} </th>
                             <th> {{ client.meter_number }} </th>
                             <th> {{client.last_name}}, {{client.first_name}} {% if client.middle_name %} {{ client.middlename }} {% endif %}</th>
                             <th> {{ client.contact_number}} </th>
@@ -75,6 +77,10 @@
                     <div class="form-group mt-3">
                         <label>Meter Number: </label> <br>
                         {{ form.meter_number }}
+                    </div>
+                    <div class="form-group mt-3">
+                        <label>Paybill account number: </label> <br>
+                        {{ form.account_number }}
                     </div>
                     <div class="form-group mt-3">
                         <label>First Name: </label> <br>

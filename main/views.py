@@ -294,8 +294,8 @@ def download_invoice(request, pk):
         # Consumption
         consumption = bill.meter_consumption if bill.meter_consumption is not None else 0
         
-        # Amount due
-        amount_due = bill.payable() if hasattr(bill, 'payable') else (consumption * rate)
+        # Amount due (remaining after partial payments)
+        amount_due = bill.balance_remaining() if hasattr(bill, 'balance_remaining') else (bill.payable() if hasattr(bill, 'payable') else (consumption * rate))
         
         # Next reading date - exactly one month after billing date
         if bill.billing_date:
@@ -316,7 +316,9 @@ def download_invoice(request, pk):
             "consumption":      consumption,
             "rate":             f"{rate:,.0f}",
             "amount_due":       f"{amount_due:,.2f}",
-            "mpesa_number":     "+254 728 984188",
+            "mpesa_paybill":    getattr(settings, "MPESA_SHORTCODE", "") or "",
+            "account_number":   bill.name.account_number if bill.name_id else "",
+            "mpesa_number":     getattr(settings, "MPESA_SHORTCODE", "") or "",
             "next_reading_date": next_reading_date,
             "email":            "info@timajiwater.co.ke",
             "phone":            "+254 721 974819",
@@ -352,8 +354,8 @@ def dashboard(request):
         'title': 'Dashboard',
         'total_users': Account.objects.filter(is_superuser=False).count(),
         'total_bills': WaterBill.objects.all().count(),
-        'pending_bills': WaterBill.objects.filter(payment_status='Pending').count(),
-        'ongoingbills': WaterBill.objects.filter(payment_status='Pending'),
+        'pending_bills': WaterBill.objects.filter(payment_status__in=['Pending', 'Partial']).count(),
+        'ongoingbills': WaterBill.objects.filter(payment_status__in=['Pending', 'Partial']),
         'connected_clients': Client.objects.filter(status='Connected').count(),
         'disconnected_clients': Client.objects.filter(status='Disconnected').count(),
         'recent_users': Account.objects.filter(is_superuser=False).order_by('-created_at')[:10],
@@ -364,9 +366,9 @@ def dashboard(request):
 @verified_or_superuser
 def ongoing_bills(request):
     if request.user.is_superuser or request.user.is_staff:
-        ongoingbills = WaterBill.objects.filter(payment_status='Pending')
+        ongoingbills = WaterBill.objects.filter(payment_status__in=['Pending', 'Partial'])
     else:
-        ongoingbills = WaterBill.objects.filter(payment_status='Pending', approval_status='Approved', name__user=request.user)
+        ongoingbills = WaterBill.objects.filter(payment_status__in=['Pending', 'Partial'], approval_status='Approved', name__user=request.user)
     context = {
         'title': 'Ongoing Bills',
         'ongoingbills': ongoingbills,
@@ -1440,7 +1442,7 @@ def payment_cancel(request):
 def user_dashboard(request):
     try:
         client = Client.objects.get(user=request.user)
-        bills_qs = WaterBill.objects.filter(name=client, approval_status='Approved', payment_status__in=['Paid', 'Pending']).order_by('-billing_date')
+        bills_qs = WaterBill.objects.filter(name=client, approval_status='Approved', payment_status__in=['Paid', 'Pending', 'Partial']).order_by('-billing_date')
         bills = [
             {
                 'billing_date': bill.billing_date.strftime('%Y-%m-%d') if bill.billing_date else '',

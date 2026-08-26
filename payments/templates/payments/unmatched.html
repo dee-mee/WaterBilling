@@ -1,0 +1,60 @@
+{% extends 'main/layout.html' %}
+{% block body %}
+<div class="container-fluid">
+    <h1 class="h3 mb-2 text-primary font-weight-bolder">Unmatched Payments</h1>
+    <p class="text-muted">M-Pesa (or bank) receipts that could not be matched to an account number. Assign a client and re-run reconciliation.</p>
+
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary text-center">Needs review</h6>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered tally-table" id="dataTable" width="100%" cellspacing="0">
+                    <thead>
+                        <tr>
+                            <th>Received</th>
+                            <th>Reference</th>
+                            <th>Account ref typed</th>
+                            <th>Amount</th>
+                            <th>Method</th>
+                            <th>Assign client</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                       {% for payment in payments %}
+                        <tr>
+                            <td>{{ payment.created_at }}</td>
+                            <td>{{ payment.reference_code }}</td>
+                            <td>{{ payment.account_reference }}</td>
+                            <td>KSh {{ payment.amount }}</td>
+                            <td>{{ payment.get_method_display }}</td>
+                            <td>
+                                <form method="post" action="{% url 'assign_unmatched_payment' payment.pk %}" class="form-inline">
+                                    {% csrf_token %}
+                                    <select name="client_id" class="form-control mr-2" required>
+                                        <option value="">Select account</option>
+                                        {% for client in clients %}
+                                        <option value="{{ client.pk }}">{{ client.account_number }} — {{ client }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="btn btn-primary btn-sm">Match</button>
+                                </form>
+                                <form method="post" action="{% url 'retry_payment' payment.pk %}" class="mt-1">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn btn-outline-secondary btn-sm">Retry lookup</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center">No unmatched payments.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

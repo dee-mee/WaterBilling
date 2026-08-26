@@ -7,6 +7,7 @@ attrs==25.4.0
 bandit==1.9.3
 brotli==1.2.0
 certifi==2024.12.14
+celery==5.4.0
 cffi==2.0.0
 chardet==5.2.0
 charset-normalizer==3.3.2
@@ -53,6 +54,7 @@ python-dotenv==1.2.1
 pytz==2024.1
 PyYAML==6.0.3
 qrcode==7.4.2
+redis==5.2.1
 reportlab==4.0.9
 requests==2.32.3
 rich==14.3.2

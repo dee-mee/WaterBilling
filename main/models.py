@@ -1,3 +1,5 @@
+from decimal import Decimal, ROUND_HALF_UP
+
 from django.db import models
 from account.models import *
 import datetime
@@ -5,9 +7,21 @@ import string, secrets
 from django.utils import timezone
 
 
+def money(value):
+    if value is None:
+        return Decimal("0.00")
+    return Decimal(str(value)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+
+
 class Client(models.Model):
     user = models.ForeignKey(Account, on_delete=models.CASCADE, null=True)
-    meter_number = models.BigIntegerField(null=True)
+    meter_number = models.BigIntegerField(null=True, db_index=True)
+    account_number = models.CharField(
+        max_length=20,
+        unique=True,
+        db_index=True,
+        help_text="M-Pesa Paybill account reference (BillRefNumber).",
+    )
     first_name = models.CharField(max_length=30) 
     last_name = models.CharField(max_length=30) 
     middle_name = models.CharField(max_length=30, null=True, blank=True) 
@@ -16,14 +30,33 @@ class Client(models.Model):
     latitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, help_text="Latitude coordinate for map location")
     longitude = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True, help_text="Longitude coordinate for map location")
     status = models.TextField(choices=(('Connected', 'Connected'), ('Disconnected', 'Disconnected'), ('Pending', 'Pending')))
+    credit_balance = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
 
     def save(self, *args, **kwargs):
         if self.user:
             self.first_name = self.user.first_name
             self.last_name = self.user.last_name
             # Assuming middle_name is not a field in the Account model
-            # self.middle_name = self.user.middle_name 
+            # self.middle_name = self.user.middle_name
+        if not self.account_number:
+            self.account_number = Client.allocate_account_number(self.meter_number)
         super().save(*args, **kwargs)
+
+    @classmethod
+    def allocate_account_number(cls, meter_number=None):
+        """Prefer unused meter number; otherwise the next sequential 10-digit id."""
+        used = set(cls.objects.exclude(account_number="").values_list("account_number", flat=True))
+        if meter_number is not None:
+            candidate = str(meter_number).strip()
+            if candidate and candidate not in used:
+                return candidate
+        next_seq = 1000000001
+        numeric = [int(a) for a in used if str(a).isdigit()]
+        if numeric:
+            next_seq = max(max(numeric) + 1, next_seq)
+        while str(next_seq) in used:
+            next_seq += 1
+        return str(next_seq)
 
 
     def __str__(self):
@@ -34,15 +67,21 @@ class Client(models.Model):
 
 
 class WaterBill(models.Model):
+    UNPAID_STATUSES = ("Pending", "Partial")
+
     name = models.ForeignKey(Client, on_delete=models.CASCADE)
     previous_reading = models.BigIntegerField(null=True)
     present_reading = models.BigIntegerField(null=True)
     meter_consumption = models.BigIntegerField(null=True)
-    payment_status = models.TextField(choices=(('Paid','Paid'),('Pending', 'Pending')), null=True)
+    payment_status = models.TextField(
+        choices=(("Paid", "Paid"), ("Pending", "Pending"), ("Partial", "Partial")),
+        null=True,
+    )
     approval_status = models.TextField(choices=(('Pending Approval', 'Pending Approval'), ('Approved', 'Approved'), ('Rejected', 'Rejected')), default='Pending Approval')
     billing_date = models.DateField(null=True)
     duedate = models.DateField(null=True)
     penaltydate = models.DateField(null=True)
+    amount_paid = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
 
     
     def compute_bill(self):
@@ -92,6 +131,14 @@ class WaterBill(models.Model):
         if self.penaltydate and today >= self.penaltydate:
             return self.compute_bill() + self.penalty()
         return self.compute_bill()
+
+    def balance_remaining(self):
+        if self.payment_status == "Paid":
+            return Decimal("0.00")
+        due = money(self.payable())
+        paid = money(self.amount_paid)
+        remaining = due - paid
+        return remaining if remaining > 0 else Decimal("0.00")
 
     def save(self, *args, **kwargs):
         if self.meter_consumption is None and self.present_reading is not None and self.previous_reading is not None:

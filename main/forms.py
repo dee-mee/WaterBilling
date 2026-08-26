@@ -27,11 +27,16 @@ class BillForm(forms.ModelForm):
 class ClientForm(forms.ModelForm):
     contact_number = forms.CharField(max_length=13, validators=[RegexValidator(r'^\+254\d{9}$', 'Enter a valid Kenyan phone number.')])
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['account_number'].required = False
+
     class Meta:
         model = Client
-        fields = ['user', 'meter_number', 'contact_number', 'address', 'latitude', 'longitude', 'status']
+        fields = ['user', 'meter_number', 'account_number', 'contact_number', 'address', 'latitude', 'longitude', 'status']
         widgets = {
             'meter_number': forms.TextInput(attrs={'type': 'number', 'class': 'form-control', 'placeholder':'0000000' }),
+            'account_number': forms.TextInput(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'Paybill account number'}),
             'first_name': forms.TextInput(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'First Name' }),
             'middle_name': forms.TextInput(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'Middle Name' }),
             'last_name': forms.TextInput(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'Last Name' }),
@@ -50,12 +55,17 @@ class CustomerForm(forms.ModelForm):
         help_text='Format: +254XXXXXXXXX (optional)'
     )
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['account_number'].required = False
+
     class Meta:
         model = Client
-        fields = ['user', 'meter_number', 'contact_number', 'address', 'latitude', 'longitude', 'status']
+        fields = ['user', 'meter_number', 'account_number', 'contact_number', 'address', 'latitude', 'longitude', 'status']
         widgets = {
             'user': forms.Select(attrs={'class': 'form-control'}),
             'meter_number': forms.TextInput(attrs={'type': 'number', 'class': 'form-control', 'placeholder':'0000000', 'required': True}),
+            'account_number': forms.TextInput(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'Paybill account (auto if blank)'}),
             'address': forms.TextInput(attrs={'type': 'text', 'class': 'form-control', 'placeholder':'House Number, Street, Area', 'required': True}),
             'latitude': forms.NumberInput(attrs={'type': 'number', 'step': '0.000001', 'class': 'form-control', 'placeholder':'0.4', 'id': 'id_latitude'}),
             'longitude': forms.NumberInput(attrs={'type': 'number', 'step': '0.000001', 'class': 'form-control', 'placeholder':'37.9', 'id': 'id_longitude'}),
