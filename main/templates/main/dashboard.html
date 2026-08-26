@@ -197,8 +197,8 @@
                         <thead>
                             <tr>
                                 <th>Name</th>
-                                <th>Bill</th>
                                 <th>Meter Consumption</th>
+                                <th>Amount</th>
                                 <th>Due date</th>
                                 <th>Penalty date</th>
                                 <th>Penalty</th>
@@ -211,8 +211,8 @@
                            {% for bill in ongoingbills %}
                             <tr>
                                 <td> {{bill.name}} </td>
-                                <td> {{bill.meter_consumption}} cu.m</td> 
-                                <td> KSh {{bill.compute_bill}}</td> 
+                                <td> {{bill.meter_consumption}} cu.m</td>
+                                <td> KSh {{bill.compute_bill}}</td>
                                 <td> {{bill.duedate}} </td> 
                                 <td> {{bill.penaltydate}} </td> 
                                 <td> {% if bill.penalty %} KSh {{bill.penalty}} {% else %} No Penalty {% endif %}</td> 
