@@ -1,4 +1,4 @@
-from django.db import migrations, models
+from django.db import migrations, models, connection
 
 
 def backfill_account_numbers(apps, schema_editor):
@@ -27,6 +27,19 @@ def noop_reverse(apps, schema_editor):
     pass
 
 
+def drop_existing_index(apps, schema_editor):
+    """Drop existing account_number index if it exists (for idempotency)."""
+    try:
+        with connection.cursor() as cursor:
+            # Try to drop any existing account_number indexes
+            cursor.execute("DROP INDEX IF EXISTS main_client_account_number_48e25570_like")
+            cursor.execute("DROP INDEX IF EXISTS main_client_account_number_key")
+            cursor.execute("DROP INDEX IF EXISTS main_client_account_number_idx")
+    except Exception:
+        # If any drop fails, continue - the index might not exist
+        pass
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -34,6 +47,9 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # Drop any existing indexes first (for redeploy scenarios)
+        migrations.RunPython(drop_existing_index, migrations.RunPython.noop),
+        
         migrations.AddField(
             model_name="client",
             name="account_number",
