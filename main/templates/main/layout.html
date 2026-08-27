@@ -29,6 +29,10 @@
 
     <link href="{% static 'sb_admin/css/sb-admin-2.min.css' %}" rel="stylesheet">
 
+    <!-- Leaflet & Geocoder CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder@1.13.0/dist/Control.Geocoder.css" />
+
     <style>
         #accordionSidebar.sidebar {
             font-size: 0.95rem;
@@ -382,8 +386,88 @@
         </div>
     </div>
 </div>
+
+<!-- M-Pesa Payment Modal (Safaricom Daraja Express) -->
+<div class="modal fade" id="mpesaPaymentModal" tabindex="-1" role="dialog" aria-labelledby="mpesaPaymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+            <div class="modal-header bg-success text-white py-3">
+                <h5 class="modal-title font-weight-bold" id="mpesaPaymentModalLabel">
+                    <i class="fa-solid fa-mobile-screen-button mr-2"></i> Pay Bill via M-Pesa
+                </h5>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-4">
+                <div id="mpesaModalAlert" class="alert alert-info mb-3">
+                    <i class="fas fa-info-circle mr-1"></i> Enter your M-Pesa phone number below to send a payment prompt to your phone.
+                </div>
+
+                <div class="card bg-light border-0 mb-3">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">Month / Period:</span>
+                            <span class="font-weight-bold text-dark" id="mpesaModalMonth">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="text-muted small">M-Pesa Account Ref:</span>
+                            <span class="font-weight-bold text-primary" id="mpesaModalAccount">-</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted small">Amount Due:</span>
+                            <span class="h5 mb-0 font-weight-bold text-success" id="mpesaModalAmount">KES 0</span>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="mpesaStkForm">
+                    <input type="hidden" id="mpesaModalBillId" name="bill_id" value="">
+                    
+                    <div class="form-group mb-3">
+                        <label for="mpesaPhoneInput" class="font-weight-bold text-gray-700">M-Pesa Phone Number:</label>
+                        <div class="input-group">
+                            <div class="input-group-prepend">
+                                <span class="input-group-text bg-white text-success"><i class="fas fa-phone"></i></span>
+                            </div>
+                            <input type="text" id="mpesaPhoneInput" name="phone_number" class="form-control" placeholder="e.g. 0712345678 or 254712345678" required>
+                        </div>
+                        <small class="form-text text-muted">Safaricom Daraja will send a PIN prompt to this phone number.</small>
+                    </div>
+
+                    <button type="submit" class="btn btn-success btn-block py-2 font-weight-bold shadow-sm" id="btnSendStkPrompt">
+                        <i class="fa-solid fa-paper-plane mr-2"></i> Send M-Pesa Prompt (STK Push)
+                    </button>
+                </form>
+
+                <hr class="my-3">
+
+                <!-- Manual Paybill Guide & Status Confirmation -->
+                <div class="bg-light p-3 rounded border small mb-3">
+                    <p class="mb-1 font-weight-bold text-dark"><i class="fas fa-wallet mr-1 text-success"></i> Manual Paybill Option:</p>
+                    <div class="d-flex justify-content-between">
+                        <span>Paybill Business No: <strong>174379</strong></span>
+                        <span>Account: <strong id="mpesaGuideAccount" class="text-primary">-</strong></span>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="btnCheckStatus" style="width: 48%;">
+                        <i class="fas fa-sync-alt mr-1"></i> Check Status
+                    </button>
+                    <button type="button" class="btn btn-outline-success btn-sm" id="btnConfirmPaidSimulation" style="width: 48%;">
+                        <i class="fas fa-check-circle mr-1"></i> Confirm Bill Paid
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
     <script src="{% static 'sb_admin/vendor/jquery/jquery.min.js' %}"></script>
     <script src="{% static 'sb_admin/vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+    <!-- Leaflet & Geocoder JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="https://unpkg.com/leaflet-control-geocoder@1.13.0/dist/Control.Geocoder.js"></script>
     <script src="{% static 'sb_admin/vendor/jquery-easing/jquery.easing.min.js' %}"></script>
     <script src="{% static 'sb_admin/js/sb-admin-2.min.js' %}"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -550,10 +634,7 @@
                 alert('Bill ID not found');
                 return;
             }
-            const printWindow = window.open(`/bills/${billId}/receipt/`, 'printWindow', 'height=600,width=800');
-            printWindow.onload = function() {
-                printWindow.print();
-            };
+            window.open(`/bills/${billId}/receipt/?print=1`, 'printWindow', 'height=650,width=850');
         }
 
         // Get bill ID from table (fallback method)
@@ -572,6 +653,135 @@
         }
 
         // Chart initialization moved to individual pages
+    </script>
+    <script>
+    $(document).ready(function() {
+        // Open M-Pesa payment modal
+        $(document).on('click', '.pay-mpesa-btn', function(e) {
+            e.preventDefault();
+            var btn = $(this);
+            var billId = btn.data('bill-id');
+            var amount = btn.data('amount') || btn.data('payable') || '0';
+            var account = btn.data('account') || 'Auto-Assigned';
+            var phone = btn.data('phone') || '';
+            var month = btn.data('month') || 'Bill Payment';
+
+            $('#mpesaModalBillId').val(billId);
+            $('#mpesaModalMonth').text(month);
+            $('#mpesaModalAccount').text(account);
+            $('#mpesaGuideAccount').text(account);
+            $('#mpesaModalAmount').text('KES ' + parseFloat(amount).toLocaleString('en-US', {minimumFractionDigits: 0, maximumFractionDigits: 2}));
+            $('#mpesaPhoneInput').val(phone);
+
+            $('#mpesaModalAlert').removeClass('alert-danger alert-success alert-warning').addClass('alert-info').html('<i class="fas fa-info-circle mr-1"></i> Enter your M-Pesa phone number below to send a payment prompt to your phone.');
+            
+            $('#mpesaPaymentModal').modal('show');
+        });
+
+        // Send STK Push prompt
+        $('#mpesaStkForm').on('submit', function(e) {
+            e.preventDefault();
+            var form = $(this);
+            var submitBtn = $('#btnSendStkPrompt');
+            var origHtml = submitBtn.html();
+
+            submitBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i> Sending Prompt...');
+            $('#mpesaModalAlert').removeClass('alert-danger alert-success alert-warning').addClass('alert-info').html('<i class="fas fa-spinner fa-spin mr-1"></i> Connecting to Safaricom Daraja API...');
+
+            $.ajax({
+                url: '{% url "initiate_customer_stk_push" %}',
+                type: 'POST',
+                data: form.serialize(),
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                success: function(res) {
+                    submitBtn.prop('disabled', false).html(origHtml);
+                    if (res.success) {
+                        if (res.already_paid) {
+                            $('#mpesaModalAlert').removeClass('alert-info alert-danger').addClass('alert-success').html('<i class="fas fa-check-circle mr-1"></i> ' + res.message);
+                            setTimeout(function() { location.reload(); }, 1500);
+                            return;
+                        }
+                        $('#mpesaModalAlert').removeClass('alert-info alert-danger').addClass('alert-success').html('<i class="fas fa-check-circle mr-1"></i> ' + res.message);
+                    } else {
+                        $('#mpesaModalAlert').removeClass('alert-info alert-success').addClass('alert-warning').html('<i class="fas fa-exclamation-triangle mr-1"></i> ' + res.message);
+                    }
+                },
+                error: function(xhr) {
+                    submitBtn.prop('disabled', false).html(origHtml);
+                    var errorMsg = 'Could not send M-Pesa prompt. Please check details or click Confirm Bill Paid.';
+                    try {
+                        var r = JSON.parse(xhr.responseText);
+                        if (r.message) errorMsg = r.message;
+                    } catch(err) {}
+                    $('#mpesaModalAlert').removeClass('alert-info alert-success').addClass('alert-danger').html('<i class="fas fa-exclamation-circle mr-1"></i> ' + errorMsg);
+                }
+            });
+        });
+
+        // Check payment status button
+        $('#btnCheckStatus').on('click', function() {
+            var billId = $('#mpesaModalBillId').val();
+            if (!billId) return;
+
+            var btn = $(this);
+            var origText = btn.html();
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i>');
+
+            $.ajax({
+                url: '/payments/check-status/' + billId + '/',
+                type: 'GET',
+                success: function(res) {
+                    btn.prop('disabled', false).html(origText);
+                    if (res.paid) {
+                        $('#mpesaModalAlert').removeClass('alert-info alert-warning alert-danger').addClass('alert-success').html('<i class="fas fa-check-circle mr-1"></i> ' + res.message);
+                        setTimeout(function() { location.reload(); }, 1200);
+                    } else {
+                        $('#mpesaModalAlert').removeClass('alert-info alert-success').addClass('alert-warning').html('<i class="fas fa-clock mr-1"></i> ' + (res.message || 'Payment not yet detected. Ensure PIN was entered on phone.'));
+                    }
+                },
+                error: function() {
+                    btn.prop('disabled', false).html(origText);
+                    alert('Could not verify status.');
+                }
+            });
+        });
+
+        // Confirm Payment Simulation button (sandbox / direct verification)
+        $('#btnConfirmPaidSimulation').on('click', function() {
+            var billId = $('#mpesaModalBillId').val();
+            var phone = $('#mpesaPhoneInput').val();
+            if (!billId) return;
+
+            var btn = $(this);
+            var origText = btn.html();
+            btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Verifying...');
+
+            $.ajax({
+                url: '{% url "confirm_payment_simulation" %}',
+                type: 'POST',
+                data: {
+                    bill_id: billId,
+                    phone_number: phone,
+                    csrfmiddlewaretoken: '{{ csrf_token }}'
+                },
+                success: function(res) {
+                    btn.prop('disabled', false).html(origText);
+                    if (res.success) {
+                        $('#mpesaModalAlert').removeClass('alert-info alert-warning alert-danger').addClass('alert-success').html('<i class="fas fa-check-circle mr-1"></i> ' + res.message);
+                        setTimeout(function() { location.reload(); }, 1200);
+                    } else {
+                        alert('Error confirming payment: ' + (res.message || 'Please try again.'));
+                    }
+                },
+                error: function() {
+                    btn.prop('disabled', false).html(origText);
+                    alert('Server error verifying payment.');
+                }
+            });
+        });
+    });
     </script>
     {% endblock %}
 

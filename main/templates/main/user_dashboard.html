@@ -49,6 +49,7 @@
                             <th>Present Reading</th>
                             <th>Consumption (Units)</th>
                             <th>Status</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -62,6 +63,21 @@
                             <span class="badge bg-{% if bill.payment_status == 'Paid' %}success{% else %}warning{% endif %}">
                                 {{ bill.payment_status }}
                             </span>
+                        </td>
+                        <td>
+                            {% if bill.payment_status != 'Paid' %}
+                            <button type="button" class="btn btn-sm btn-success pay-mpesa-btn shadow-sm"
+                                    data-bill-id="{{ bill.id }}"
+                                    data-amount="{{ bill.payable }}"
+                                    data-account="{% if client %}{{ client.account_number }}{% endif %}"
+                                    data-phone="{% if client %}{{ client.contact_number }}{% endif %}"
+                                    data-month="{{ bill.billing_date|date:'F Y' }}"
+                                    title="Pay with M-Pesa">
+                                <i class="fa-solid fa-mobile-screen-button me-1"></i> Pay with M-Pesa
+                            </button>
+                            {% else %}
+                            <span class="text-success small font-weight-bold"><i class="fas fa-check-circle"></i> Paid</span>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

@@ -298,5 +298,14 @@
   </div>
 
 </div>
+{% if auto_print %}
+<script>
+  window.onload = function() {
+    setTimeout(function() {
+      window.print();
+    }, 300);
+  };
+</script>
+{% endif %}
 </body>
 </html>

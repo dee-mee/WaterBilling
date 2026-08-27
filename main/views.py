@@ -322,15 +322,19 @@ def download_invoice(request, pk):
             "next_reading_date": next_reading_date,
             "email":            "info@timajiwater.co.ke",
             "phone":            "+254 721 974819",
+            "auto_print":       request.GET.get('print') == '1' or request.path.endswith('/receipt/'),
         }
         
+        # If print/view requested, render HTML receipt directly for clean printing without triggering attachment download
+        if request.GET.get('print') == '1' or request.GET.get('view') == '1' or request.path.endswith('/receipt/'):
+            return render(request, "main/receipt_template.html", context)
+
         html_string = render_to_string("main/receipt_template.html", context)
         try:
             pdf_bytes = weasyprint.HTML(string=html_string).write_pdf()
         except TypeError as e:
             # Handle version compatibility issues
             if "PDF.__init__()" in str(e):
-                # Try alternative approach
                 from weasyprint import HTML, CSS
                 doc = HTML(string=html_string)
                 pdf_bytes = doc.write_pdf()

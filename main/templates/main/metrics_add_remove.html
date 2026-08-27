@@ -197,7 +197,7 @@
 {% block scripts %}
 <script>
 $(document).ready(function() {
-    // Add new customer
+    // Add new customer / meter
     $('#add-customer-btn').on('click', function(e) {
         e.preventDefault();
         var modal = $('#customerFormModal');
@@ -210,12 +210,11 @@ $(document).ready(function() {
             type: 'GET',
             success: function(data) {
                 modal.find('.modal-body').html(data);
-                // Re-initialize map after form is loaded
                 setTimeout(function() {
-                    if (typeof initLocationMap === 'function') {
-                        initLocationMap();
+                    if (typeof window.initLocationMap === 'function') {
+                        window.initLocationMap();
                     }
-                }, 300);
+                }, 150);
             },
             error: function(xhr, status, error) {
                 console.error('Error loading form:', error);
@@ -223,24 +222,31 @@ $(document).ready(function() {
                     '<div class="alert alert-danger">' +
                     '<h5>Error Loading Form</h5>' +
                     '<p>Could not load the form. Please try again.</p>' +
-                    '<p><small>Error: ' + error + '</small></p>' +
                     '</div>'
                 );
             }
         });
     });
 
-    // Edit customer
-    $('#dataTable').on('click', '.edit-customer-btn', function() {
+    // Edit customer / meter
+    $('#dataTable').on('click', '.edit-customer-btn', function(e) {
+        e.preventDefault();
         var clientId = $(this).data('client-id');
         var modal = $('#customerFormModal');
+        modal.find('.modal-body').html('<div class="text-center p-4"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Loading form...</p></div>');
+        modal.find('.modal-title').text('Edit Customer');
+        modal.modal('show');
+
         $.ajax({
             url: '{% url "edit_customer" 0 %}'.replace('0', clientId),
             type: 'GET',
             success: function(data) {
                 modal.find('.modal-body').html(data);
-                modal.find('.modal-title').text('Edit Customer');
-                modal.modal('show');
+                setTimeout(function() {
+                    if (typeof window.initLocationMap === 'function') {
+                        window.initLocationMap();
+                    }
+                }, 150);
             },
             error: function() {
                 alert('Error loading form.');
@@ -248,8 +254,9 @@ $(document).ready(function() {
         });
     });
 
-    // Delete customer
-    $('#dataTable').on('click', '.delete-customer-btn', function() {
+    // Delete customer / meter
+    $('#dataTable').on('click', '.delete-customer-btn', function(e) {
+        e.preventDefault();
         var clientId = $(this).data('client-id');
         if (confirm('Are you sure you want to remove this meter?')) {
             $.ajax({
@@ -272,8 +279,8 @@ $(document).ready(function() {
         }
     });
 
-    // Handle form submission - use event delegation for dynamically loaded forms
-    $(document).on('submit', '#customer-form', function(event) {
+    // Handle form submission
+    $(document).off('submit', '#customer-form').on('submit', '#customer-form', function(event) {
         event.preventDefault();
         event.stopPropagation();
         
@@ -282,12 +289,6 @@ $(document).ready(function() {
         var submitBtn = form.find('input[type="submit"]');
         var originalBtnText = submitBtn.val();
         
-        console.log('Form submission started');
-        console.log('Form action:', form.attr('action'));
-        console.log('Form method:', form.attr('method'));
-        console.log('Form data:', form.serialize());
-        
-        // Validate required fields before submission
         var hasErrors = false;
         form.find('[required]').each(function() {
             if (!$(this).val()) {
@@ -299,20 +300,13 @@ $(document).ready(function() {
         });
         
         if (hasErrors) {
-            alert('Please fill in all required fields.');
+            alert('Please fill in all required fields (Meter Number, Address, Connection Status).');
             return false;
         }
         
-        // Disable submit button and show loading state
         submitBtn.prop('disabled', true).val('Saving...');
         
-        // Get CSRF token
-        var csrftoken = form.find('[name=csrfmiddlewaretoken]').val();
-        if (!csrftoken) {
-            csrftoken = $('[name=csrfmiddlewaretoken]').val();
-        }
-        
-        console.log('CSRF token:', csrftoken ? 'Found' : 'Missing');
+        var csrftoken = form.find('[name=csrfmiddlewaretoken]').val() || $('[name=csrfmiddlewaretoken]').val();
         
         $.ajax({
             url: form.attr('action'),
@@ -323,40 +317,26 @@ $(document).ready(function() {
             },
             dataType: 'json',
             success: function(response) {
-                console.log('Form submission success:', response);
                 submitBtn.prop('disabled', false).val(originalBtnText);
                 
                 if (response.success) {
-                    // Show success message
                     if (typeof sweetify !== 'undefined') {
-                        sweetify.success('Customer saved successfully!');
+                        sweetify.success('Meter saved successfully!');
                     } else {
-                        alert('Customer saved successfully!');
+                        alert('Meter saved successfully!');
                     }
                     modal.modal('hide');
-                    // Reload page after a short delay
                     setTimeout(function() {
                         location.reload();
-                    }, 500);
+                    }, 400);
                 } else {
-                    console.log('Form has errors:', response.message);
-                    // Form has errors, replace form HTML
                     if (response.form_html) {
                         modal.find('.modal-body').html(response.form_html);
-                        // Show error message
-                        if (response.message) {
-                            var errorAlert = '<div class="alert alert-danger alert-dismissible fade show" role="alert">' +
-                                '<strong>Error:</strong> ' + response.message +
-                                '<button type="button" class="close" data-dismiss="alert"><span>&times;</span></button>' +
-                                '</div>';
-                            modal.find('.modal-body').prepend(errorAlert);
-                        }
-                        // Re-initialize map if form was reloaded
                         setTimeout(function() {
-                            if (typeof initLocationMap === 'function') {
-                                initLocationMap();
+                            if (typeof window.initLocationMap === 'function') {
+                                window.initLocationMap();
                             }
-                        }, 100);
+                        }, 150);
                     } else {
                         alert('Error: ' + (response.message || 'Please check the form for errors.'));
                     }
@@ -364,54 +344,23 @@ $(document).ready(function() {
             },
             error: function(xhr, status, error) {
                 submitBtn.prop('disabled', false).val(originalBtnText);
-                
-                console.error('Form submission error:', error);
-                console.error('Status:', status);
-                console.error('Response:', xhr.responseText);
-                console.error('Response status:', xhr.status);
-                
-                // Try to parse error response
-                var errorMsg = 'Error submitting form. ';
                 try {
-                    // Check if response is HTML (form with errors)
-                    if (xhr.responseText && xhr.responseText.trim().startsWith('<!')) {
-                        // Server returned HTML instead of JSON - might be a form validation error
-                        modal.find('.modal-body').html(xhr.responseText);
-                        setTimeout(function() {
-                            if (typeof initLocationMap === 'function') {
-                                initLocationMap();
-                            }
-                        }, 100);
-                        return;
-                    }
-                    
                     var errorResponse = JSON.parse(xhr.responseText);
-                    if (errorResponse.message) {
-                        errorMsg += errorResponse.message;
-                    } else if (errorResponse.error) {
-                        errorMsg += errorResponse.error;
-                    } else if (errorResponse.form_html) {
-                        // Form has validation errors
+                    if (errorResponse.form_html) {
                         modal.find('.modal-body').html(errorResponse.form_html);
                         setTimeout(function() {
-                            if (typeof initLocationMap === 'function') {
-                                initLocationMap();
+                            if (typeof window.initLocationMap === 'function') {
+                                window.initLocationMap();
                             }
-                        }, 100);
+                        }, 150);
                         return;
                     }
-                } catch (e) {
-                    console.error('Error parsing response:', e);
-                    if (xhr.status === 403) {
-                        errorMsg += 'Access denied. Please refresh the page and try again.';
-                    } else if (xhr.status === 500) {
-                        errorMsg += 'Server error. Please try again later.';
-                    } else {
-                        errorMsg += 'Please check your connection and try again.';
+                    if (errorResponse.message) {
+                        alert('Error: ' + errorResponse.message);
+                        return;
                     }
-                }
-                
-                alert(errorMsg);
+                } catch (e) {}
+                alert('Error saving meter. Please check form details.');
             }
         });
         

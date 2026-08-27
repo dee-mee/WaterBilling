@@ -180,16 +180,24 @@
 {% block scripts %}
 <script>
 $(document).ready(function() {
-    // Add new customer
-    $('#add-customer-btn').on('click', function() {
+    // Add new customer / meter
+    $('#add-customer-btn').on('click', function(e) {
+        e.preventDefault();
         var modal = $('#customerFormModal');
+        modal.find('.modal-body').html('<div class="text-center p-4"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Loading form...</p></div>');
+        modal.find('.modal-title').text('Add New Meter');
+        modal.modal('show');
+        
         $.ajax({
             url: '{% url "add_customer" %}',
             type: 'GET',
             success: function(data) {
                 modal.find('.modal-body').html(data);
-                modal.find('.modal-title').text('Add Customer');
-                modal.modal('show');
+                setTimeout(function() {
+                    if (typeof window.initLocationMap === 'function') {
+                        window.initLocationMap();
+                    }
+                }, 150);
             },
             error: function() {
                 alert('Error loading form.');
@@ -197,17 +205,25 @@ $(document).ready(function() {
         });
     });
 
-    // Edit customer
-    $('#dataTable').on('click', '.edit-customer-btn', function() {
+    // Edit customer / meter
+    $('#dataTable').on('click', '.edit-customer-btn', function(e) {
+        e.preventDefault();
         var clientId = $(this).data('client-id');
         var modal = $('#customerFormModal');
+        modal.find('.modal-body').html('<div class="text-center p-4"><i class="fas fa-spinner fa-spin fa-2x"></i><p>Loading form...</p></div>');
+        modal.find('.modal-title').text('Edit Customer');
+        modal.modal('show');
+
         $.ajax({
             url: '{% url "edit_customer" 0 %}'.replace('0', clientId),
             type: 'GET',
             success: function(data) {
                 modal.find('.modal-body').html(data);
-                modal.find('.modal-title').text('Edit Customer');
-                modal.modal('show');
+                setTimeout(function() {
+                    if (typeof window.initLocationMap === 'function') {
+                        window.initLocationMap();
+                    }
+                }, 150);
             },
             error: function() {
                 alert('Error loading form.');
@@ -215,8 +231,9 @@ $(document).ready(function() {
         });
     });
 
-    // Delete customer
-    $('#dataTable').on('click', '.delete-customer-btn', function() {
+    // Delete customer / meter
+    $('#dataTable').on('click', '.delete-customer-btn', function(e) {
+        e.preventDefault();
         var clientId = $(this).data('client-id');
         if (confirm('Are you sure you want to delete this customer?')) {
             $.ajax({
@@ -239,8 +256,8 @@ $(document).ready(function() {
         }
     });
 
-    // Handle form submission - use event delegation for dynamically loaded forms
-    $(document).on('submit', '#customer-form', function(event) {
+    // Handle form submission
+    $(document).off('submit', '#customer-form').on('submit', '#customer-form', function(event) {
         event.preventDefault();
         event.stopPropagation();
         
@@ -249,11 +266,24 @@ $(document).ready(function() {
         var submitBtn = form.find('input[type="submit"]');
         var originalBtnText = submitBtn.val();
         
-        // Disable submit button and show loading state
+        var hasErrors = false;
+        form.find('[required]').each(function() {
+            if (!$(this).val()) {
+                hasErrors = true;
+                $(this).addClass('is-invalid');
+            } else {
+                $(this).removeClass('is-invalid');
+            }
+        });
+        
+        if (hasErrors) {
+            alert('Please fill in all required fields (Meter Number, Address, Connection Status).');
+            return false;
+        }
+        
         submitBtn.prop('disabled', true).val('Saving...');
         
-        // Get CSRF token
-        var csrftoken = form.find('[name=csrfmiddlewaretoken]').val();
+        var csrftoken = form.find('[name=csrfmiddlewaretoken]').val() || $('[name=csrfmiddlewaretoken]').val();
         
         $.ajax({
             url: form.attr('action'),
@@ -267,25 +297,23 @@ $(document).ready(function() {
                 submitBtn.prop('disabled', false).val(originalBtnText);
                 
                 if (response.success) {
-                    // Show success message
                     if (typeof sweetify !== 'undefined') {
-                        sweetify.success('Customer saved successfully!');
+                        sweetify.success('Meter saved successfully!');
+                    } else {
+                        alert('Meter saved successfully!');
                     }
                     modal.modal('hide');
-                    // Reload page after a short delay
                     setTimeout(function() {
                         location.reload();
-                    }, 500);
+                    }, 400);
                 } else {
-                    // Form has errors, replace form HTML
                     if (response.form_html) {
                         modal.find('.modal-body').html(response.form_html);
-                        // Re-initialize map if form was reloaded
                         setTimeout(function() {
-                            if (typeof initLocationMap === 'function') {
-                                initLocationMap();
+                            if (typeof window.initLocationMap === 'function') {
+                                window.initLocationMap();
                             }
-                        }, 100);
+                        }, 150);
                     } else {
                         alert('Error: ' + (response.message || 'Please check the form for errors.'));
                     }
@@ -293,24 +321,23 @@ $(document).ready(function() {
             },
             error: function(xhr, status, error) {
                 submitBtn.prop('disabled', false).val(originalBtnText);
-                
-                console.error('Form submission error:', error);
-                console.error('Response:', xhr.responseText);
-                
-                // Try to parse error response
-                var errorMsg = 'Error submitting form. ';
                 try {
                     var errorResponse = JSON.parse(xhr.responseText);
-                    if (errorResponse.message) {
-                        errorMsg += errorResponse.message;
-                    } else if (errorResponse.error) {
-                        errorMsg += errorResponse.error;
+                    if (errorResponse.form_html) {
+                        modal.find('.modal-body').html(errorResponse.form_html);
+                        setTimeout(function() {
+                            if (typeof window.initLocationMap === 'function') {
+                                window.initLocationMap();
+                            }
+                        }, 150);
+                        return;
                     }
-                } catch (e) {
-                    errorMsg += 'Please check your connection and try again.';
-                }
-                
-                alert(errorMsg);
+                    if (errorResponse.message) {
+                        alert('Error: ' + errorResponse.message);
+                        return;
+                    }
+                } catch (e) {}
+                alert('Error saving meter. Please check form details.');
             }
         });
         

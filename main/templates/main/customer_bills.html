@@ -98,12 +98,24 @@
                             <td>{{ bill.due_date|date:"M d, Y" }}</td>
                             <td>
                                 <div class="d-flex flex-wrap gap-2">
+                                    {% if bill.payment_status != 'Paid' %}
+                                    <button type="button" class="btn btn-sm btn-success pay-mpesa-btn shadow-sm"
+                                            data-bill-id="{{ bill.id }}" 
+                                            data-amount="{{ bill.total }}" 
+                                            data-account="{{ client.account_number }}"
+                                            data-phone="{{ client.contact_number }}"
+                                            data-month="{{ bill.month }}"
+                                            title="Pay with M-Pesa Express">
+                                        <i class="fa-solid fa-mobile-screen-button mr-1"></i> Pay with M-Pesa
+                                    </button>
+                                    {% endif %}
                                     <a href="{% url 'download_invoice' bill.id %}" 
+                                       download="invoice_{{ bill.id }}.pdf"
                                        class="btn btn-sm btn-primary" 
                                        title="Download Receipt">
                                         <i class="fa-solid fa-download"></i> <span class="d-none d-sm-inline">Receipt</span>
                                     </a>
-                                    <button type="button" onclick="printBillReceipt({{ bill.id }})" class="btn btn-sm btn-success" title="Print Receipt">
+                                    <button type="button" onclick="printBillReceipt({{ bill.id }})" class="btn btn-sm btn-info" title="Print Receipt">
                                         <i class="fa-solid fa-print"></i> <span class="d-none d-sm-inline">Print</span>
                                     </button>
                                 </div>
@@ -187,10 +199,7 @@
             alert('Bill ID not found');
             return;
         }
-        const printWindow = window.open(`/bills/${billId}/receipt/`, 'printWindow', 'height=600,width=800');
-        printWindow.onload = function() {
-            printWindow.print();
-        };
+        window.open(`/bills/${billId}/receipt/?print=1`, 'printWindow', 'height=650,width=850');
     }
 
     function printAllBills() {

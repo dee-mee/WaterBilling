@@ -55,8 +55,19 @@
                             {% endif %}
                             <td>
                                 <div class="d-flex flex-wrap gap-2 justify-content-center">
-                                    <a href="{% url 'download_invoice' bill.id %}" class="btn btn-secondary btn-sm" title="Download"><i class="fa-solid fa-download"></i></a>
-                                    <button type="button" onclick="printBillReceipt({{ bill.id }})" class="btn btn-success btn-sm" title="Print"><i class="fa-solid fa-print"></i></button>
+                                    {% if bill.payment_status != 'Paid' %}
+                                    <button type="button" class="btn btn-success btn-sm pay-mpesa-btn shadow-sm"
+                                            data-bill-id="{{ bill.id }}"
+                                            data-amount="{{ bill.payable }}"
+                                            data-account="{% if bill.name %}{{ bill.name.account_number }}{% endif %}"
+                                            data-phone="{% if bill.name %}{{ bill.name.contact_number }}{% endif %}"
+                                            data-month="{{ bill.billing_date|date:'F Y' }}"
+                                            title="Pay with M-Pesa Express">
+                                        <i class="fa-solid fa-mobile-screen-button mr-1"></i> Pay with M-Pesa
+                                    </button>
+                                    {% endif %}
+                                    <a href="{% url 'download_invoice' bill.id %}" download="invoice_{{ bill.id }}.pdf" class="btn btn-secondary btn-sm" title="Download Receipt"><i class="fa-solid fa-download"></i></a>
+                                    <button type="button" onclick="printBillReceipt({{ bill.id }})" class="btn btn-info btn-sm" title="Print Receipt"><i class="fa-solid fa-print"></i></button>
                                 </div>
                             </td>
                             {% if request.user.is_superuser or request.user.is_staff %}
@@ -84,10 +95,7 @@
             alert('Bill ID not found');
             return;
         }
-        const printWindow = window.open(`/bills/${billId}/receipt/`, 'printWindow', 'height=600,width=800');
-        printWindow.onload = function() {
-            printWindow.print();
-        };
+        window.open(`/bills/${billId}/receipt/?print=1`, 'printWindow', 'height=650,width=850');
     }
 </script>
 

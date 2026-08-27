@@ -34,10 +34,14 @@ class Client(models.Model):
 
     def save(self, *args, **kwargs):
         if self.user:
-            self.first_name = self.user.first_name
-            self.last_name = self.user.last_name
-            # Assuming middle_name is not a field in the Account model
-            # self.middle_name = self.user.middle_name
+            if self.user.first_name:
+                self.first_name = self.user.first_name
+            if self.user.last_name:
+                self.last_name = self.user.last_name
+        if not self.first_name:
+            self.first_name = "Customer"
+        if not self.last_name:
+            self.last_name = str(self.meter_number or "Account")
         if not self.account_number:
             self.account_number = Client.allocate_account_number(self.meter_number)
         super().save(*args, **kwargs)

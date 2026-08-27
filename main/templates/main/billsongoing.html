@@ -159,10 +159,7 @@ function printBillReceipt(billId) {
         alert('Bill ID not found');
         return;
     }
-    const printWindow = window.open(`/bills/${billId}/receipt/`, 'printWindow', 'height=600,width=800');
-    printWindow.onload = function() {
-        printWindow.print();
-    };
+    window.open(`/bills/${billId}/receipt/?print=1`, 'printWindow', 'height=650,width=850');
 }
 </script>
 {% endblock %}
