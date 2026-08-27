@@ -26,7 +26,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Lobster&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css" integrity="sha512-xh6O/CkQoPOWDdYTDqeRdPCVd1SpvCA9XXcUnZS2FmJNp1coAFzvtCN9BmamE+4aHK8yyUHUSCcJHgXloTyT2A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-    
+
     <link href="{% static 'sb_admin/css/sb-admin-2.min.css' %}" rel="stylesheet">
 
     <style>
@@ -68,10 +68,8 @@
         }
     </style>
 
-    <!-- Datatables -->
-
-    <!-- <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/dt-1.12.1/b-2.2.3/b-html5-2.2.3/b-print-2.2.3/datatables.min.css"/> -->
-    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.13.1/b-2.3.3/b-colvis-2.3.3/b-html5-2.3.3/b-print-2.3.3/sb-1.4.0/sp-2.1.0/datatables.min.css"/>
+    <!-- Datatables (v3 — no SearchPanes: not yet released for DataTables 3) -->
+    <link href="https://cdn.datatables.net/v/bs4/dt-3.0.2/b-4.0.2/sb-2.0.0/sl-4.0.1/datatables.min.css" rel="stylesheet" integrity="sha384-o5qXuKAZyS29FDOoczUZRionqxkBNqgLBEC+RH14mu5qZEhbyQdDOlAt7bgp9Z9x" crossorigin="anonymous">
 
     {% block head %}
     {% endblock %}
@@ -395,10 +393,10 @@
     {% sweetify %}
     {% endif %}
 
-    <!-- Datatables -->
+    <!-- Datatables (v3 — no SearchPanes: not yet released for DataTables 3) -->
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/pdfmake.min.js"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.36/vfs_fonts.js"></script>
-    <script type="text/javascript" src="https://cdn.datatables.net/v/bs4/jszip-2.5.0/dt-1.13.1/b-2.3.3/b-colvis-2.3.3/b-html5-2.3.3/b-print-2.3.3/sb-1.4.0/sp-2.1.0/datatables.min.js"></script>
+    <script src="https://cdn.datatables.net/v/bs4/dt-3.0.2/b-4.0.2/sb-2.0.0/sl-4.0.1/datatables.min.js" integrity="sha384-BFf7iCrcf7CI3xuekgC7RZYv2j8+7l9OBkL/CTf8j1SX8wIKUzO6xUJvS4/yx4tV" crossorigin="anonymous"></script>
 
     
     <script type="text/javascript" src="{% static 'scanner/html5-qrcode.min_.js' %}"></script> 
@@ -430,7 +428,7 @@
         $(".tally-table").each(function() {
             var table = $(this);
             var headerCount = table.find('thead th').length;
-            
+
             // Only initialize if table has headers
             if (headerCount > 0) {
                 try {
@@ -438,68 +436,56 @@
                     if ($.fn.DataTable.isDataTable(table)) {
                         table.DataTable().destroy();
                     }
-                    
+
                     table.DataTable({
-            responsive: true,
-            pading: true,
-            pageLength: 10,
-            lengthChange: true,
+                        responsive: true,
+                        paging: true,
+                        pageLength: 10,
+                        lengthChange: true,
                         autoWidth: false,
-            searching: true,
-            bInfo: true,
-            bSort: true,
-            dom: 'Bfrtipl',
+                        searching: true,
+                        info: true,
+                        ordering: true,
+                        language: {
+                            emptyTable: "No records found"
+                        },
                         columnDefs: [
                             { targets: '_all', orderable: true }
                         ],
-            searchPanes: {
-            viewTotal: true
-            },
-            buttons: [
-                {
-                    text: 'Print',
-                    className: 'btn btn-success',
-                    titleAttr: 'Print Receipt',
-                    action: function(e, dt, node, config) {
-                        const billId = dt.rows().data()[0]?.DOMStringMap?.billId || getBillIdFromTable(dt);
-                        if (billId) {
-                            printBillReceipt(billId);
-                        }
-                    }
-                },
-            ]
+                        // NOTE: SearchPanes is intentionally NOT used here.
+                        // DataTables' own v3 beta docs confirm SearchPanes is not
+                        // yet released for DataTables 3 — referencing it in
+                        // `layout` throws "Unknown feature: searchPanes" and
+                        // corrupts the rest of this table's init (ordering,
+                        // column mapping). Re-add it once DataTables ships
+                        // SearchPanes for v3.
+                        layout: {
+                            topStart: {
+                                buttons: [
+                                    {
+                                        text: 'Print',
+                                        className: 'btn btn-success',
+                                        titleAttr: 'Print Receipt',
+                                        action: function(e, dt, node, config) {
+                                            const billId = dt.rows().data()[0]?.DOMStringMap?.billId || getBillIdFromTable(dt);
+                                            if (billId) {
+                                                printBillReceipt(billId);
+                                            }
+                                        }
+                                    },
+                                ]
+                            },
+                            topEnd: 'search',
+                            bottomStart: 'pageLength',
+                            bottomEnd: 'paging',
+                            bottom: 'info'
+                        },
                     });
                 } catch(e) {
                     console.warn('DataTables initialization error:', e);
                 }
             }
         });
-        $(".receipt_table").DataTable({
-            bPaginate: false,
-            responsive: true,
-            pading: true,
-            pageLength: 10,
-            lengthChange: true,
-            autoWidth: true,
-            searching: false,
-            bInfo: false,
-            bSort: false,
-            dom: 'Bfrtipl',
-            buttons: [
-                {
-                    text: 'Print',
-                    className: 'btn btn-success',
-                    titleAttr: 'Print Receipt',
-                    action: function(e, dt, node, config) {
-                        const billId = dt.rows().data()[0]?.DOMStringMap?.billId || getBillIdFromTable(dt);
-                        if (billId) {
-                            printBillReceipt(billId);
-                        }
-                    }
-                },
-            ]
-        });
-        
     </script>
 
     <script>
