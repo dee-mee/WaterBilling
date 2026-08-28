@@ -1907,6 +1907,8 @@ def meter_readings_dashboard(request):
     Displays all customers with their recent readings and billing info
     """
     from django.shortcuts import get_object_or_404
+    from django.core.paginator import Paginator
+    from django.db.models import Max, Subquery, OuterRef
     
     # Get all clients
     clients = Client.objects.select_related('user').all()
@@ -1926,10 +1928,28 @@ def meter_readings_dashboard(request):
     if status_filter:
         clients = clients.filter(status=status_filter)
     
+    # Optimize: Use subquery to get latest bill for each client in a single query
+    latest_bill_subquery = WaterBill.objects.filter(
+        name=OuterRef('pk')
+    ).order_by('-billing_date')
+    
+    clients = clients.annotate(
+        latest_bill_id=Subquery(latest_bill_subquery.values('id')[:1])
+    ).order_by('id')  # Add ordering for consistent pagination
+    
+    # Add pagination to prevent loading thousands of records at once
+    paginator = Paginator(clients, 50)  # Show 50 clients per page
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
+    
+    # Get all latest bills in a single query
+    latest_bill_ids = [client.latest_bill_id for client in page_obj if client.latest_bill_id]
+    latest_bills = {bill.id: bill for bill in WaterBill.objects.filter(id__in=latest_bill_ids).select_related('name')}
+    
     # Build client data with latest readings
     client_data = []
-    for client in clients:
-        latest_bill = WaterBill.objects.filter(name=client).order_by('-billing_date').first()
+    for client in page_obj:
+        latest_bill = latest_bills.get(client.latest_bill_id) if client.latest_bill_id else None
         
         data = {
             'client': client,
@@ -1950,6 +1970,7 @@ def meter_readings_dashboard(request):
     context = {
         'title': 'Meter Readings Dashboard',
         'client_data': client_data,
+        'page_obj': page_obj,
         'search_query': search_query,
         'status_filter': status_filter,
         'form': BillForm(),
@@ -2001,14 +2022,25 @@ def customer_reading_history(request, client_id):
     View complete meter reading history for a customer
     """
     from django.shortcuts import get_object_or_404
+    from django.core.paginator import Paginator
     
     client = get_object_or_404(Client, id=client_id)
-    bills = WaterBill.objects.filter(name=client).order_by('-billing_date')
+    bills = WaterBill.objects.filter(name=client).select_related('name').order_by('-billing_date')
+    
+    # Calculate statistics using aggregation
+    paid_bills_count = bills.filter(payment_status='Paid').count()
+    
+    # Add pagination to prevent loading hundreds of bills at once
+    paginator = Paginator(bills, 50)  # Show 50 bills per page
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
     
     context = {
         'title': f'Reading History - {client}',
         'client': client,
-        'bills': bills,
+        'bills': page_obj,
+        'page_obj': page_obj,
+        'paid_bills_count': paid_bills_count,
     }
     
     return render(request, 'main/customer_reading_history.html', context)
