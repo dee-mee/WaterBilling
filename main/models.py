@@ -1,6 +1,7 @@
 from decimal import Decimal, ROUND_HALF_UP
 
 from django.db import models
+from django.core.cache import cache
 from account.models import *
 import datetime
 import string, secrets
@@ -90,17 +91,25 @@ class WaterBill(models.Model):
     
     def compute_bill(self):
         try:
-            metric = Metric.objects.first()
-            if not metric:
-                # If no metric exists, create one with default values
-                metric = Metric.objects.create(
-                    consump_amount=200.0,
-                    penalty_amount=100.0
-                )
-            consump_amount = metric.consump_amount
-            # Ensure rate is at least 200 (treat 1 as legacy invalid value)
-            if not consump_amount or consump_amount <= 1:
-                consump_amount = 200.0
+            consump_amount = cache.get('billing_metric_consump_amount')
+            if consump_amount is None:
+                metric = Metric.objects.first()
+                if not metric:
+                    # If no metric exists, create one with default values
+                    metric = Metric.objects.create(
+                        consump_amount=200.0,
+                        penalty_amount=100.0
+                    )
+                consump_amount = metric.consump_amount
+                # Ensure rate is at least 200 (treat 1 as legacy invalid value)
+                if not consump_amount or consump_amount <= 1:
+                    consump_amount = 200.0
+                # Cached for 5 minutes — this rate changes rarely (admin-configured),
+                # so this trades a small staleness window for avoiding a DB round
+                # trip on every single WaterBill.compute_bill()/payable() call.
+                # If Metric is updated, call cache.delete('billing_metric_consump_amount')
+                # (e.g. in Metric.save()) to invalidate immediately instead of waiting.
+                cache.set('billing_metric_consump_amount', consump_amount, 300)
             return self.meter_consumption * consump_amount if self.meter_consumption else 0
         except Exception as e:
             # Fallback in case of any error
@@ -158,6 +167,13 @@ class Metric(models.Model):
     user = models.OneToOneField(Account, on_delete=models.CASCADE, null=True)
     consump_amount = models.FloatField(default=200, null=True)
     penalty_amount = models.FloatField(default=1, null=True)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Invalidate the cached rate used by WaterBill.compute_bill() so a
+        # rate change is picked up immediately instead of waiting out the
+        # 5-minute cache window.
+        cache.delete('billing_metric_consump_amount')
 
 
 class SupportTicket(models.Model):

@@ -17,6 +17,7 @@ urlpatterns = [
 
     path('bills/ongoing', views.ongoing_bills, name="ongoingbills"),
     path('bills/history', views.history_bills, name="billshistory"),
+    path('bills/history/data/', views.history_bills_data, name="billshistory_data"),
     path('bill/update/<int:pk>', views.update_bills, name="billupdate"),
     path('bill/delete/<int:pk>', views.delete_bills, name="billdelete"),
     path('bill/invoice/<int:pk>', views.download_invoice, name="download_invoice"),

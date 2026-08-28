@@ -17,7 +17,7 @@
 </div>
 {% endif %}
 
-<form action="{% if client %}{% url 'edit_customer' client.id %}{% else %}{% url 'add_customer' %}{% endif %}" method="POST" class="user" id="customer-form">
+<form action="{% if client %}{% url 'edit_customer' client.id %}{% else %}{% url 'add_customer' %}{% endif %}" method="POST" class="user" id="customer-form" novalidate>
     {% csrf_token %}
     
     <div class="form-group">

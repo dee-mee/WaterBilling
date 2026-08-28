@@ -102,12 +102,6 @@
                                 </div>
                             </td>
                         </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="10" class="text-center text-muted py-4">
-                                No customers found. <a href="{% url 'metrics_add_remove' %}">Add a customer</a>
-                            </td>
-                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>

@@ -13,7 +13,12 @@
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-bordered tally-table" id="dataTable" width="100%" cellspacing="0">
+                <!-- NOTE: no "tally-table" class here -- this table is
+                     server-side processed and gets its own DataTables init
+                     below, instead of the shared client-side one in
+                     layout.html. Keep id="dataTable" for shared hooks that
+                     expect it. -->
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
                     <thead>
                         <tr>
                             <th>Name</th>
@@ -27,59 +32,14 @@
                             <th>Penalty</th>
                             <th>Payable Amount</th>
                             <th>Payment Status</th>
-                            {% if request.user.is_superuser or request.user.is_staff %}
                             <th>Approval Status</th>
-                            {% endif %}
                             <th>Action</th>
-                            {% if request.user.is_superuser or request.user.is_staff %}
-                            <th>Action</th> 
-                            {% endif %}
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
-                       {% for bill in billshistory %}
-                        <tr>
-                            <td> {{bill.name}} </td>
-                            <td> {{bill.billing_date|date:"F Y"}} </td>
-                            <td> {{bill.previous_reading}} </td>
-                            <td> {{bill.present_reading}} </td>
-                            <td> {{bill.meter_consumption}} cu.m</td> 
-                            <td> KSh {{bill.compute_bill}}</td> 
-                            <td> {{bill.duedate}} </td> 
-                            <td> {{bill.penaltydate}} </td> 
-                            <td> {{bill.penalty}}</td> 
-                            <td class="font-weight-bolder text-primary"> KSh {{bill.payable}} </td> 
-                            <td> {{bill.payment_status}}</td>
-                            {% if request.user.is_superuser or request.user.is_staff %}
-                            <td> {{bill.approval_status}} </td>
-                            {% endif %}
-                            <td>
-                                <div class="d-flex flex-wrap gap-2 justify-content-center">
-                                    {% if bill.payment_status != 'Paid' %}
-                                    <button type="button" class="btn btn-success btn-sm pay-mpesa-btn shadow-sm"
-                                            data-bill-id="{{ bill.id }}"
-                                            data-amount="{{ bill.payable }}"
-                                            data-account="{% if bill.name %}{{ bill.name.account_number }}{% endif %}"
-                                            data-phone="{% if bill.name %}{{ bill.name.contact_number }}{% endif %}"
-                                            data-month="{{ bill.billing_date|date:'F Y' }}"
-                                            title="Pay with M-Pesa Express">
-                                        <i class="fa-solid fa-mobile-screen-button mr-1"></i> Pay with M-Pesa
-                                    </button>
-                                    {% endif %}
-                                    <a href="{% url 'download_invoice' bill.id %}" download="invoice_{{ bill.id }}.pdf" class="btn btn-secondary btn-sm" title="Download Receipt"><i class="fa-solid fa-download"></i></a>
-                                    <button type="button" onclick="printBillReceipt({{ bill.id }})" class="btn btn-info btn-sm" title="Print Receipt"><i class="fa-solid fa-print"></i></button>
-                                </div>
-                            </td>
-                            {% if request.user.is_superuser or request.user.is_staff %}
-                            <td class="text-center">  
-                                <div class="d-flex flex-wrap gap-2 justify-content-center">
-                                    <a href="{% url 'billupdate' bill.id %}" class="btn btn-primary btn-sm" title="Edit"><i class="fa-regular fa-pen-to-square"></i></a>
-                                    <a href="{% url 'billdelete' bill.id %}" class="btn btn-danger btn-sm" title="Delete"><i class="fa-solid fa-trash-can"></i></a>
-                                </div>
-                            </td>
-                            {% endif %}
-                        </tr>   
-                        {% endfor %}
+                        <!-- Intentionally empty -- DataTables populates this
+                             via AJAX from /bills/history/data/ -->
                     </tbody>
                 </table>
             </div>
@@ -97,6 +57,41 @@
         }
         window.open(`/bills/${billId}/receipt/?print=1`, 'printWindow', 'height=650,width=850');
     }
+
+    $(document).ready(function() {
+        var isStaff = {% if request.user.is_superuser or request.user.is_staff %}true{% else %}false{% endif %};
+
+        $('#dataTable').DataTable({
+            serverSide: true,
+            processing: true,
+            ajax: {
+                url: '{% url "billshistory_data" %}',
+                type: 'GET'
+            },
+            columns: [
+                { data: 'name' },
+                { data: 'billing_date' },
+                { data: 'previous_reading' },
+                { data: 'present_reading' },
+                { data: 'meter_consumption' },
+                { data: 'compute_bill' },
+                { data: 'duedate' },
+                { data: 'penaltydate' },
+                { data: 'penalty' },
+                { data: 'payable', className: 'font-weight-bolder text-primary' },
+                { data: 'payment_status' },
+                { data: 'approval_status', visible: isStaff },
+                { data: 'action', orderable: false, searchable: false },
+                { data: 'staff_action', orderable: false, searchable: false, visible: isStaff },
+            ],
+            pageLength: 10,
+            lengthChange: true,
+            responsive: true,
+            language: {
+                emptyTable: "No records found"
+            }
+        });
+    });
 </script>
 
 {% endblock %}

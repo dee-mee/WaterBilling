@@ -64,13 +64,6 @@
                                 </a>
                             </td>
                         </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="9" class="text-center text-muted py-4">
-                                No readings found for this customer.
-                                <a href="{% url 'add_meter_reading' client.id %}">Add the first reading</a>
-                            </td>
-                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>

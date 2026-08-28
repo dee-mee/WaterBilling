@@ -359,7 +359,7 @@ def dashboard(request):
         'total_users': Account.objects.filter(is_superuser=False).count(),
         'total_bills': WaterBill.objects.all().count(),
         'pending_bills': WaterBill.objects.filter(payment_status__in=['Pending', 'Partial']).count(),
-        'ongoingbills': WaterBill.objects.filter(payment_status__in=['Pending', 'Partial']),
+        'ongoingbills': WaterBill.objects.filter(payment_status__in=['Pending', 'Partial']).select_related('name'),
         'connected_clients': Client.objects.filter(status='Connected').count(),
         'disconnected_clients': Client.objects.filter(status='Disconnected').count(),
         'recent_users': Account.objects.filter(is_superuser=False).order_by('-created_at')[:10],
@@ -370,9 +370,9 @@ def dashboard(request):
 @verified_or_superuser
 def ongoing_bills(request):
     if request.user.is_superuser or request.user.is_staff:
-        ongoingbills = WaterBill.objects.filter(payment_status__in=['Pending', 'Partial'])
+        ongoingbills = WaterBill.objects.filter(payment_status__in=['Pending', 'Partial']).select_related('name')
     else:
-        ongoingbills = WaterBill.objects.filter(payment_status__in=['Pending', 'Partial'], approval_status='Approved', name__user=request.user)
+        ongoingbills = WaterBill.objects.filter(payment_status__in=['Pending', 'Partial'], approval_status='Approved', name__user=request.user).select_related('name')
     context = {
         'title': 'Ongoing Bills',
         'ongoingbills': ongoingbills,
@@ -412,14 +412,135 @@ def ongoing_bills(request):
 @verified_or_superuser
 def history_bills(request):
     if request.user.is_superuser or request.user.is_staff:
-        billshistory = WaterBill.objects.filter(payment_status__in=['Paid', 'Pending'])
+        billshistory = WaterBill.objects.filter(payment_status__in=['Paid', 'Pending']).select_related('name')
     else:
-        billshistory = WaterBill.objects.filter(payment_status__in=['Paid', 'Pending'], approval_status='Approved', name__user=request.user)
+        billshistory = WaterBill.objects.filter(payment_status__in=['Paid', 'Pending'], approval_status='Approved', name__user=request.user).select_related('name')
     context = {
         'title': 'Bills History',
         'billshistory': billshistory,
     }
     return render(request, 'main/billshistory.html', context)
+
+
+# Column order MUST match the <thead> in billshistory.html exactly — this is
+# the fixed contract between the server-side JSON and the DataTables init.
+# Both staff-only columns (Approval Status, second Action) are always
+# included here; DataTables hides them for non-staff users client-side via
+# `columns.visible`, so the payload shape never changes based on role.
+BILLSHISTORY_COLUMNS = [
+    'name', 'billing_date', 'previous_reading', 'present_reading',
+    'meter_consumption', 'compute_bill', 'duedate', 'penaltydate',
+    'penalty', 'payable', 'payment_status', 'approval_status',
+    'action', 'staff_action',
+]
+
+# Only these are real DB fields DataTables can sort/filter on directly.
+# Computed properties (compute_bill, penalty, payable) can't be ordered
+# at the DB level without extra work, so they're excluded from sorting.
+BILLSHISTORY_ORDERABLE_DB_FIELDS = {
+    'name': 'name__last_name',
+    'billing_date': 'billing_date',
+    'previous_reading': 'previous_reading',
+    'present_reading': 'present_reading',
+    'meter_consumption': 'meter_consumption',
+    'duedate': 'duedate',
+    'penaltydate': 'penaltydate',
+    'payment_status': 'payment_status',
+    'approval_status': 'approval_status',
+}
+
+
+@login_required(login_url='login')
+@verified_or_superuser
+def history_bills_data(request):
+    """DataTables server-side processing endpoint for Bills History."""
+    if request.user.is_superuser or request.user.is_staff:
+        qs = WaterBill.objects.filter(payment_status__in=['Paid', 'Pending']).select_related('name')
+    else:
+        qs = WaterBill.objects.filter(
+            payment_status__in=['Paid', 'Pending'],
+            approval_status='Approved',
+            name__user=request.user,
+        ).select_related('name')
+
+    records_total = qs.count()
+
+    # --- search ---
+    search_value = request.GET.get('search[value]', '').strip()
+    if search_value:
+        qs = qs.filter(
+            Q(name__first_name__icontains=search_value) |
+            Q(name__last_name__icontains=search_value) |
+            Q(payment_status__icontains=search_value) |
+            Q(approval_status__icontains=search_value)
+        )
+    records_filtered = qs.count()
+
+    # --- ordering ---
+    order_col_index = request.GET.get('order[0][column]')
+    order_dir = request.GET.get('order[0][dir]', 'asc')
+    if order_col_index is not None:
+        try:
+            col_name = BILLSHISTORY_COLUMNS[int(order_col_index)]
+        except (ValueError, IndexError):
+            col_name = None
+        db_field = BILLSHISTORY_ORDERABLE_DB_FIELDS.get(col_name)
+        if db_field:
+            if order_dir == 'desc':
+                db_field = f'-{db_field}'
+            qs = qs.order_by(db_field)
+
+    # --- paging ---
+    start = int(request.GET.get('start', 0))
+    length = int(request.GET.get('length', 10))
+    page = qs[start:start + length] if length != -1 else qs[start:]
+
+    data = []
+    for bill in page:
+        data.append({
+            'name': str(bill.name),
+            'billing_date': bill.billing_date.strftime('%B %Y') if bill.billing_date else '',
+            'previous_reading': bill.previous_reading,
+            'present_reading': bill.present_reading,
+            'meter_consumption': f'{bill.meter_consumption} cu.m' if bill.meter_consumption is not None else '',
+            'compute_bill': f'KSh {bill.compute_bill()}',
+            'duedate': bill.duedate.isoformat() if bill.duedate else '',
+            'penaltydate': bill.penaltydate.isoformat() if bill.penaltydate else '',
+            'penalty': f'KSh {bill.penalty()}' if bill.penalty() else 'No Penalty',
+            'payable': f'KSh {bill.payable()}',
+            'payment_status': bill.payment_status,
+            'approval_status': bill.approval_status,
+            'action': (
+                (
+                    f'<button type="button" class="btn btn-success btn-sm pay-mpesa-btn shadow-sm" '
+                    f'data-bill-id="{bill.id}" data-amount="{bill.payable()}" '
+                    f'data-account="{bill.name.account_number if bill.name else ""}" '
+                    f'data-phone="{bill.name.contact_number if bill.name else ""}" '
+                    f'data-month="{bill.billing_date.strftime("%B %Y") if bill.billing_date else ""}" '
+                    f'title="Pay with M-Pesa Express"><i class="fa-solid fa-mobile-screen-button mr-1"></i> Pay with M-Pesa</button> '
+                    if bill.payment_status != 'Paid' else ''
+                ) +
+                f'<a href="/bills/{bill.id}/receipt/" download="invoice_{bill.id}.pdf" '
+                f'class="btn btn-secondary btn-sm" title="Download Receipt">'
+                f'<i class="fa-solid fa-download"></i></a> '
+                f'<button type="button" onclick="printBillReceipt({bill.id})" '
+                f'class="btn btn-info btn-sm" title="Print Receipt">'
+                f'<i class="fa-solid fa-print"></i></button>'
+            ),
+            'staff_action': (
+                f'<a href="/bill/update/{bill.id}" class="btn btn-primary btn-sm" title="Edit">'
+                f'<i class="fa-regular fa-pen-to-square"></i></a> '
+                f'<a href="/bill/delete/{bill.id}" class="btn btn-danger btn-sm" title="Delete">'
+                f'<i class="fa-solid fa-trash-can"></i></a>'
+            ) if (request.user.is_superuser or request.user.is_staff) else '',
+        })
+
+    return JsonResponse({
+        'draw': int(request.GET.get('draw', 1)),
+        'recordsTotal': records_total,
+        'recordsFiltered': records_filtered,
+        'data': data,
+    })
 
 @staff_required
 def update_bills(request, pk):
