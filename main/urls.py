@@ -16,6 +16,7 @@ urlpatterns = [
     path('export-recent-users-excel/', views.export_recent_users_excel, name='export_recent_users_excel'),
 
     path('bills/ongoing', views.ongoing_bills, name="ongoingbills"),
+    path('bills/ongoing/data/', views.ongoing_bills_data, name="ongoingbills_data"),
     path('bills/history', views.history_bills, name="billshistory"),
     path('bills/history/data/', views.history_bills_data, name="billshistory_data"),
     path('bill/update/<int:pk>', views.update_bills, name="billupdate"),

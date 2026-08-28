@@ -408,6 +408,98 @@ def ongoing_bills(request):
     return render(request, 'main/billsongoing.html', context)
 
 
+ONGOINGBILLS_ORDERABLE_DB_FIELDS = {
+    'name': 'name__last_name',
+    'billing_date': 'billing_date',
+    'previous_reading': 'previous_reading',
+    'present_reading': 'present_reading',
+    'meter_consumption': 'meter_consumption',
+    'duedate': 'duedate',
+    'penaltydate': 'penaltydate',
+    'payment_status': 'payment_status',
+}
+ONGOINGBILLS_COLUMNS = [
+    'name', 'billing_date', 'previous_reading', 'present_reading',
+    'meter_consumption', 'compute_bill', 'duedate', 'penaltydate',
+    'penalty', 'payable', 'payment_status', 'action',
+]
+
+
+@login_required(login_url='login')
+@verified_or_superuser
+def ongoing_bills_data(request):
+    """DataTables server-side processing endpoint for Ongoing Bills."""
+    if request.user.is_superuser or request.user.is_staff:
+        qs = WaterBill.objects.filter(payment_status__in=['Pending', 'Partial']).select_related('name')
+    else:
+        qs = WaterBill.objects.filter(
+            payment_status__in=['Pending', 'Partial'],
+            approval_status='Approved',
+            name__user=request.user,
+        ).select_related('name')
+
+    records_total = qs.count()
+
+    search_value = request.GET.get('search[value]', '').strip()
+    if search_value:
+        qs = qs.filter(
+            Q(name__first_name__icontains=search_value) |
+            Q(name__last_name__icontains=search_value) |
+            Q(payment_status__icontains=search_value)
+        )
+    records_filtered = qs.count()
+
+    order_col_index = request.GET.get('order[0][column]')
+    order_dir = request.GET.get('order[0][dir]', 'asc')
+    if order_col_index is not None:
+        try:
+            col_name = ONGOINGBILLS_COLUMNS[int(order_col_index)]
+        except (ValueError, IndexError):
+            col_name = None
+        db_field = ONGOINGBILLS_ORDERABLE_DB_FIELDS.get(col_name)
+        if db_field:
+            if order_dir == 'desc':
+                db_field = f'-{db_field}'
+            qs = qs.order_by(db_field)
+
+    start = int(request.GET.get('start', 0))
+    length = int(request.GET.get('length', 10))
+    page = qs[start:start + length] if length != -1 else qs[start:]
+
+    is_staff = request.user.is_superuser or request.user.is_staff
+    data = []
+    for bill in page:
+        edit_link = (
+            f'<a href="/bill/update/{bill.id}" class="btn btn-primary btn-sm" title="Edit">'
+            f'<i class="fa-regular fa-pen-to-square"></i></a>'
+        ) if is_staff else ''
+        data.append({
+            'name': str(bill.name),
+            'billing_date': bill.billing_date.strftime('%B %Y') if bill.billing_date else '',
+            'previous_reading': bill.previous_reading,
+            'present_reading': bill.present_reading,
+            'meter_consumption': f'{bill.meter_consumption} cu.m' if bill.meter_consumption is not None else '',
+            'compute_bill': f'KSh {bill.compute_bill()}',
+            'duedate': bill.duedate.isoformat() if bill.duedate else '',
+            'penaltydate': bill.penaltydate.isoformat() if bill.penaltydate else '',
+            'penalty': f'KSh {bill.penalty()}' if bill.penalty() else 'No Penalty',
+            'payable': f'KSh {bill.payable()}',
+            'payment_status': bill.payment_status,
+            'action': (
+                f'<button type="button" onclick="printBillReceipt({bill.id})" '
+                f'class="btn btn-success btn-sm" title="Print Receipt">'
+                f'<i class="fa-solid fa-print"></i></button> ' + edit_link
+            ),
+        })
+
+    return JsonResponse({
+        'draw': int(request.GET.get('draw', 1)),
+        'recordsTotal': records_total,
+        'recordsFiltered': records_filtered,
+        'data': data,
+    })
+
+
 @login_required(login_url='login')
 @verified_or_superuser
 def history_bills(request):

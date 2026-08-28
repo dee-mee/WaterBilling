@@ -20,7 +20,9 @@
         </div>
         <div class="card-body">
             <div class="table-responsive">
-                <table class="table table-bordered tally-table" id="dataTable" width="100%" cellspacing="0">
+                <!-- NOTE: no "tally-table" class -- this table is server-side
+                     processed via its own DataTables init below. -->
+                <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
                     <thead>
                         <tr>
                             <th>Name</th>
@@ -38,29 +40,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                       {% for bill in ongoingbills %}
-                        <tr>
-                            <td> {{bill.name}} </td>
-                            <td> {{bill.billing_date|date:"F Y"}} </td>
-                            <td> {{bill.previous_reading}} </td>
-                            <td> {{bill.present_reading}} </td>
-                            <td> {{bill.meter_consumption}} cu.m</td> 
-                            <td> KSh {{bill.compute_bill}}</td> 
-                            <td> {{bill.duedate}} </td> 
-                            <td> {{bill.penaltydate}} </td> 
-                            <td> {{bill.penalty}}</td> 
-                            <td class="font-weight-bolder text-primary"> KSh {{bill.payable}} </td> 
-                            <td> {{bill.payment_status}}</td>
-                            <td class="text-center">
-                                <div class="d-flex flex-wrap gap-2 justify-content-center">
-                                    <button type="button" onclick="printBillReceipt({{ bill.id }})" class="btn btn-success btn-sm" title="Print Receipt"><i class="fa-solid fa-print"></i></button>
-                                    {% if request.user.is_superuser or request.user.is_staff %}
-                                        <a href="{% url 'billupdate' bill.id %}" class="btn btn-primary btn-sm" title="Edit"><i class="fa-regular fa-pen-to-square"></i></a>
-                                    {% endif %}
-                                </div>
-                            </td>
-                        </tr>   
-                        {% endfor %}
+                        <!-- Intentionally empty -- populated via AJAX from /bills/ongoing/data/ -->
                     </tbody>
                 </table>
             </div>
@@ -161,5 +141,36 @@ function printBillReceipt(billId) {
     }
     window.open(`/bills/${billId}/receipt/?print=1`, 'printWindow', 'height=650,width=850');
 }
+
+$(document).ready(function() {
+    $('#dataTable').DataTable({
+        serverSide: true,
+        processing: true,
+        ajax: {
+            url: '{% url "ongoingbills_data" %}',
+            type: 'GET'
+        },
+        columns: [
+            { data: 'name' },
+            { data: 'billing_date' },
+            { data: 'previous_reading' },
+            { data: 'present_reading' },
+            { data: 'meter_consumption' },
+            { data: 'compute_bill' },
+            { data: 'duedate' },
+            { data: 'penaltydate' },
+            { data: 'penalty' },
+            { data: 'payable', className: 'font-weight-bolder text-primary' },
+            { data: 'payment_status' },
+            { data: 'action', orderable: false, searchable: false },
+        ],
+        pageLength: 10,
+        lengthChange: true,
+        responsive: true,
+        language: {
+            emptyTable: "No records found"
+        }
+    });
+});
 </script>
 {% endblock %}
