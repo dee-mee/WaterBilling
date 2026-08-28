@@ -1124,7 +1124,7 @@ def metrics_active(request):
     # Optimize: Use single query with annotation instead of N+1 queries
     clients = clients.annotate(
         total_consumption=Sum('waterbill__meter_consumption')
-    )
+    ).order_by('id')  # Add ordering for consistent pagination
     
     # Add pagination to prevent loading thousands of records at once
     paginator = Paginator(clients, 50)  # Show 50 clients per page
@@ -1170,7 +1170,7 @@ def metrics_inactive(request):
     # Optimize: Use single query with annotation instead of N+1 queries
     clients = clients.annotate(
         total_consumption=Sum('waterbill__meter_consumption')
-    )
+    ).order_by('id')  # Add ordering for consistent pagination
     
     # Add pagination to prevent loading thousands of records at once
     paginator = Paginator(clients, 50)  # Show 50 clients per page
@@ -1217,7 +1217,7 @@ def metrics_add_remove(request):
     # Optimize: Use single query with annotation instead of N+1 queries
     clients = clients.annotate(
         total_consumption=Sum('waterbill__meter_consumption')
-    )
+    ).order_by('id')  # Add ordering for consistent pagination
     
     # Add pagination to prevent loading thousands of records at once
     paginator = Paginator(clients, 50)  # Show 50 clients per page
