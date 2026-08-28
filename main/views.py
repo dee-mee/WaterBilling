@@ -7,7 +7,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from .models import *
 from account.models import *
 from .forms import MetricsForm, BillForm, ClientForm, BulkUploadForm, CustomerForm
-from django.db.models import F, Sum, Q
+from django.db.models import F, Sum, Q, Count
 import sweetify
 from account.forms import *
 from main.decorators import *
@@ -354,16 +354,31 @@ def download_invoice(request, pk):
 
 @staff_required
 def dashboard(request):
+    from django.db.models import Count, Q
+    
+    # Optimize queries with aggregation instead of multiple count() calls
+    bills_stats = WaterBill.objects.aggregate(
+        total_bills=Count('id'),
+        pending_bills=Count('id', filter=Q(payment_status__in=['Pending', 'Partial']))
+    )
+    
+    clients_stats = Client.objects.aggregate(
+        connected_clients=Count('id', filter=Q(status='Connected')),
+        disconnected_clients=Count('id', filter=Q(status='Disconnected'))
+    )
+    
     context = {
         'title': 'Dashboard',
         'total_users': Account.objects.filter(is_superuser=False).count(),
-        'total_bills': WaterBill.objects.all().count(),
-        'pending_bills': WaterBill.objects.filter(payment_status__in=['Pending', 'Partial']).count(),
-        'ongoingbills': WaterBill.objects.filter(payment_status__in=['Pending', 'Partial']).select_related('name'),
-        'connected_clients': Client.objects.filter(status='Connected').count(),
-        'disconnected_clients': Client.objects.filter(status='Disconnected').count(),
+        'total_clients': Client.objects.count(),  # Added actual customer count
+        'total_bills': bills_stats['total_bills'],
+        'pending_bills': bills_stats['pending_bills'],
+        'connected_clients': clients_stats['connected_clients'],
+        'disconnected_clients': clients_stats['disconnected_clients'],
         'recent_users': Account.objects.filter(is_superuser=False).order_by('-created_at')[:10],
+        'ongoingbills': WaterBill.objects.filter(payment_status__in=['Pending', 'Partial']).select_related('name').order_by('-billing_date')[:5],  # Limit to 5 recent bills
     }
+    
     return render(request, 'main/dashboard.html', context)
 
 @login_required(login_url='login')
@@ -426,7 +441,6 @@ ONGOINGBILLS_COLUMNS = [
 
 
 @login_required(login_url='login')
-@verified_or_superuser
 def ongoing_bills_data(request):
     """DataTables server-side processing endpoint for Ongoing Bills."""
     if request.user.is_superuser or request.user.is_staff:
@@ -543,7 +557,6 @@ BILLSHISTORY_ORDERABLE_DB_FIELDS = {
 
 
 @login_required(login_url='login')
-@verified_or_superuser
 def history_bills_data(request):
     """DataTables server-side processing endpoint for Bills History."""
     if request.user.is_superuser or request.user.is_staff:
@@ -1091,6 +1104,9 @@ def metrics(request):
 
 @staff_required
 def metrics_active(request):
+    from django.db.models import Sum
+    from django.core.paginator import Paginator
+    
     clients = Client.objects.filter(status='Connected')
     search_query = request.GET.get('search', '')
     
@@ -1105,15 +1121,23 @@ def metrics_active(request):
     total_meters = clients.count()
     total_consumption_all = WaterBill.objects.aggregate(Sum('meter_consumption'))['meter_consumption__sum'] or 0
     
-    for client in clients:
-        client.total_consumption = WaterBill.objects.filter(name=client).aggregate(Sum('meter_consumption'))['meter_consumption__sum'] or 0
+    # Optimize: Use single query with annotation instead of N+1 queries
+    clients = clients.annotate(
+        total_consumption=Sum('waterbill__meter_consumption')
+    )
+    
+    # Add pagination to prevent loading thousands of records at once
+    paginator = Paginator(clients, 50)  # Show 50 clients per page
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
 
     context = {
         'title': 'Active Meters',
-        'clients': clients,
+        'clients': page_obj,
+        'page_obj': page_obj,
         'total_meters': total_meters,
         'total_consumption': total_consumption_all,
-        'connected_clients': clients.count(),
+        'connected_clients': total_meters,
         'disconnected_clients': 0,
         'pending_clients': 0,
         'form': CustomerForm(),
@@ -1124,6 +1148,9 @@ def metrics_active(request):
 
 @staff_required
 def metrics_inactive(request):
+    from django.db.models import Sum
+    from django.core.paginator import Paginator
+    
     clients = Client.objects.filter(status__in=['Disconnected', 'Pending'])
     search_query = request.GET.get('search', '')
     
@@ -1140,12 +1167,20 @@ def metrics_inactive(request):
     total_meters = clients.count()
     total_consumption_all = WaterBill.objects.aggregate(Sum('meter_consumption'))['meter_consumption__sum'] or 0
     
-    for client in clients:
-        client.total_consumption = WaterBill.objects.filter(name=client).aggregate(Sum('meter_consumption'))['meter_consumption__sum'] or 0
+    # Optimize: Use single query with annotation instead of N+1 queries
+    clients = clients.annotate(
+        total_consumption=Sum('waterbill__meter_consumption')
+    )
+    
+    # Add pagination to prevent loading thousands of records at once
+    paginator = Paginator(clients, 50)  # Show 50 clients per page
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
 
     context = {
         'title': 'Inactive Meters',
-        'clients': clients,
+        'clients': page_obj,
+        'page_obj': page_obj,
         'total_meters': total_meters,
         'total_consumption': total_consumption_all,
         'connected_clients': 0,
@@ -1159,6 +1194,9 @@ def metrics_inactive(request):
 
 @user_passes_test(lambda u: u.is_superuser)
 def metrics_add_remove(request):
+    from django.db.models import Sum
+    from django.core.paginator import Paginator
+    
     clients = Client.objects.all()
     search_query = request.GET.get('search', '')
     
@@ -1176,12 +1214,20 @@ def metrics_add_remove(request):
     disconnected_clients = Client.objects.filter(status='Disconnected').count()
     pending_clients = Client.objects.filter(status='Pending').count()
 
-    for client in clients:
-        client.total_consumption = WaterBill.objects.filter(name=client).aggregate(Sum('meter_consumption'))['meter_consumption__sum'] or 0
+    # Optimize: Use single query with annotation instead of N+1 queries
+    clients = clients.annotate(
+        total_consumption=Sum('waterbill__meter_consumption')
+    )
+    
+    # Add pagination to prevent loading thousands of records at once
+    paginator = Paginator(clients, 50)  # Show 50 clients per page
+    page_number = request.GET.get('page', 1)
+    page_obj = paginator.get_page(page_number)
 
     context = {
         'title': 'Add/Remove Meters',
-        'clients': clients,
+        'clients': page_obj,
+        'page_obj': page_obj,
         'total_meters': total_meters,
         'total_consumption': total_consumption_all,
         'connected_clients': connected_clients,
@@ -1538,16 +1584,16 @@ def send_reminders_view(request):
                 Auth_Token = os.environ.get('TWILIO_AUTH_TOKEN')
                 if SID and Auth_Token:
                     sender = '+17262005435'
-                    receiver = bill.client.contact_number
+                    receiver = bill.name.contact_number
                     message = f'\n Your Total Bill is: {bill.total_bill} KSH \n\n Your due date is: {bill.due_date} \n\n Your penalty date is: {bill.penalty_date}'
                     cl = TwilClient(SID, Auth_Token)
                     cl.messages.create(body=message, from_=sender, to=receiver)
-                    sweetify.toast(request, f'Reminder sent to {bill.client.first_name} {bill.client.last_name}')
+                    sweetify.toast(request, f'Reminder sent to {bill.name.first_name} {bill.name.last_name}')
                 else:
                     sweetify.toast(request, 'Twilio credentials not configured.', icon='warning')
                     break # Stop sending reminders if keys are not set
             except:
-                sweetify.toast(request, f'Could not send reminder to {bill.client.first_name} {bill.client.last_name}', icon='error')
+                sweetify.toast(request, f'Could not send reminder to {bill.name.first_name} {bill.name.last_name}', icon='error')
         return HttpResponseRedirect(reverse('ongoingbills'))
     return render(request, 'main/send_reminders.html')
 
@@ -1581,23 +1627,30 @@ def bill_reject(request, pk):
 
 @login_required(login_url='login')
 def usage_analytics_view(request):
+    from django.db.models import Sum, Count
+    from django.db.models.functions import TruncMonth
+    
     if request.user.is_superuser or request.user.is_staff:
-        bills = WaterBill.objects.exclude(billing_date__isnull=True).order_by('billing_date')
+        # Aggregate by month instead of loading all individual bills
+        monthly_data = WaterBill.objects.exclude(billing_date__isnull=True).annotate(
+            month=TruncMonth('billing_date')
+        ).values('month').annotate(
+            total_consumption=Sum('meter_consumption'),
+            bill_count=Count('id')
+        ).order_by('month')
     else:
-        bills = WaterBill.objects.filter(name__user=request.user).exclude(billing_date__isnull=True).order_by('billing_date')
+        # For regular users, show only their data aggregated by month
+        monthly_data = WaterBill.objects.filter(
+            name__user=request.user
+        ).exclude(billing_date__isnull=True).annotate(
+            month=TruncMonth('billing_date')
+        ).values('month').annotate(
+            total_consumption=Sum('meter_consumption'),
+            bill_count=Count('id')
+        ).order_by('month')
 
-    if request.user.is_superuser or request.user.is_staff:
-        bills = WaterBill.objects.exclude(billing_date__isnull=True).order_by('billing_date')
-    else:
-        bills = WaterBill.objects.filter(name__user=request.user).exclude(billing_date__isnull=True).order_by('billing_date')
-
-    print(f"Bills for user {request.user}: {bills}")
-
-    labels = [bill.billing_date.strftime('%B %Y') for bill in bills]
-    data = [bill.meter_consumption for bill in bills]
-
-    print(f"Usage Analytics Labels: {labels}")
-    print(f"Usage Analytics Data: {data}")
+    labels = [item['month'].strftime('%B %Y') for item in monthly_data]
+    data = [item['total_consumption'] or 0 for item in monthly_data]
 
     average_usage = sum(data) / len(data) if data else 0
     highest_consumption = max(data) if data else 0

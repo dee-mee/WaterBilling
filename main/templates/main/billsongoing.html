@@ -111,7 +111,9 @@
 {% endif %}
 
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const prevReading = document.querySelector('input[name="previous_reading"]');
@@ -143,12 +145,19 @@ function printBillReceipt(billId) {
 }
 
 $(document).ready(function() {
+    console.log('Initializing DataTables for ongoing bills...');
+    
     $('#dataTable').DataTable({
         serverSide: true,
         processing: true,
         ajax: {
             url: '{% url "ongoingbills_data" %}',
-            type: 'GET'
+            type: 'GET',
+            error: function(xhr, error, thrown) {
+                console.error('DataTables AJAX error:', error, thrown);
+                console.error('Response:', xhr.responseText);
+                alert('Error loading data: ' + error);
+            }
         },
         columns: [
             { data: 'name' },
@@ -169,6 +178,9 @@ $(document).ready(function() {
         responsive: true,
         language: {
             emptyTable: "No records found"
+        },
+        initComplete: function() {
+            console.log('DataTables initialized successfully');
         }
     });
 });

@@ -48,7 +48,9 @@
 
 
 </div>
+{% endblock %}
 
+{% block scripts %}
 <script>
     function printBillReceipt(billId) {
         if (!billId) {
@@ -59,6 +61,7 @@
     }
 
     $(document).ready(function() {
+        console.log('Initializing DataTables for bills history...');
         var isStaff = {% if request.user.is_superuser or request.user.is_staff %}true{% else %}false{% endif %};
 
         $('#dataTable').DataTable({
@@ -66,7 +69,12 @@
             processing: true,
             ajax: {
                 url: '{% url "billshistory_data" %}',
-                type: 'GET'
+                type: 'GET',
+                error: function(xhr, error, thrown) {
+                    console.error('DataTables AJAX error:', error, thrown);
+                    console.error('Response:', xhr.responseText);
+                    alert('Error loading data: ' + error);
+                }
             },
             columns: [
                 { data: 'name' },
@@ -89,9 +97,11 @@
             responsive: true,
             language: {
                 emptyTable: "No records found"
+            },
+            initComplete: function() {
+                console.log('DataTables initialized successfully');
             }
         });
     });
 </script>
-
 {% endblock %}

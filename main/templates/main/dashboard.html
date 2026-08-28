@@ -10,7 +10,7 @@
 
         <!--ROW-->
 
-        <div class="row" data-aos="fade-up" data-aos-duration="1000" data-aos-easing="ease-in-out">
+        <div class="row">
 
             <div class="col-xl-3 col-md-6 col-sm-12 mb-6 mb-2" >
                 <div class="card border-left-primary shadow h-100 py-2">
@@ -18,12 +18,12 @@
                         <div class="row no-gutters align-items-center">
                             <div class="col mr-2">
                                 
-                                <a href="{% url 'users' %}">
+                                <a href="{% url 'metrics_active' %}">
                                 <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                    Total Users
+                                    Total Customers
                                 </div>
                                 </a>
-                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_users }}</div>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_clients }}</div>
                             </div>
                             <div class="col-auto">
                                 <i class="fa-solid fa-users fa-2x text-gray-300"></i>
@@ -105,11 +105,11 @@
 
 
         <!-- Users Table -->
-        <div class="col-sm-12 card shadow mt-5" data-aos="fade-up" data-aos-duration="1000" data-aos-easing="ease-in-out">
+        <div class="col-sm-12 card shadow mt-5">
             <div class="card-header py-3">
                 <div class="row align-items-center">
                     <div class="col">
-                        <h6 class="m-0 font-weight-bold text-primary">Recent Users</h6>
+                        <h6 class="m-0 font-weight-bold text-primary">Recent User Accounts</h6>
                     </div>
                     <div class="col-auto">
                         <button type="button" onclick="downloadUsersExcel()" class="btn btn-sm btn-success" title="Download as Excel">
@@ -171,13 +171,16 @@
         </div>
 
         <!-- Ongoing Bills Table -->
-        <div class="col-sm-12 card shadow mt-5" data-aos="fade-up" data-aos-duration="1000" data-aos-easing="ease-in-out">
+        <div class="col-sm-12 card shadow mt-5">
             <div class="card-header py-3">
                 <div class="row align-items-center">
                     <div class="col">
-                        <h6 class="m-0 font-weight-bold text-primary">Ongoing Bills</h6>
+                        <h6 class="m-0 font-weight-bold text-primary">Recent Ongoing Bills (Latest 5)</h6>
                     </div>
                     <div class="col-auto">
+                        <a href="{% url 'ongoingbills' %}" class="btn btn-sm btn-primary" title="View All Bills">
+                            <i class="fa-solid fa-list"></i> View All
+                        </a>
                         <button type="button" onclick="downloadBillsExcel()" class="btn btn-sm btn-success" title="Download as Excel">
                             <i class="fa-solid fa-file-excel"></i> Download Excel
                         </button>
@@ -189,7 +192,7 @@
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-bordered tally-table" id="dataTable" width="100%" cellspacing="0">
+                    <table class="table table-bordered tally-table" id="usersTable" width="100%" cellspacing="0">
                         <thead>
                             <tr>
                                 <th>Name</th>
